@@ -2,23 +2,37 @@ import numpy as np
 import pandas as pd
 pd.options.mode.chained_assignment = None
 from tqdm import tqdm
-from joblib import delayed, Parallel
-from itertools import product
 
 import os
+import zipfile
+from joblib import delayed, Parallel
+from itertools import product
 
 import warnings
 warnings.filterwarnings('ignore')
 
 
+if 'data.zip' not in os.listdir():
+    os.system('wget https://cloud.tsinghua.edu.cn/f/001a8f8ba2ba4cad9bf8/?dl=1 -O data.zip')
 
 if 'data' not in os.listdir():
-    os.system('wget https://cloud.tsinghua.edu.cn/f/001a8f8ba2ba4cad9bf8/?dl=1 -O data.zip')
-    os.system('unzip data.zip')
+    os.mkdir('data')
+    os.system('wget https://cloud.tsinghua.edu.cn/f/179082ecf0f147a4840c/?dl=1 -O portfolio_ret.pkl')
+    os.system('mv portfolio_ret.pkl data')
     
+    
+with zipfile.ZipFile('data.zip', 'r') as z:    
+    with z.open('data/month_return.csv') as f:
+        print('Reading month_return.csv', end=' ')
+        mon_ret = pd.read_csv(f)    
+        mon_ret.to_pickle('data/month_return.pkl')
+        print('Done!')
+        
+    with z.open('data/datashare.csv') as f:
+        print('Reading datashare.csv', end=' ')
+        datashare = pd.read_csv(f)
+        print('Done!')
 
-datashare = pd.read_csv('data/datashare.csv')
-mon_ret = pd.read_csv('data/month_return.csv')
 
 # stock-level characteristics with index corresponding to original paper
 annual_chara = {
@@ -63,7 +77,7 @@ def pre_process(date):
     # if all stocks' factor is nan, fill by zero
     cross_slice.loc[cross_slice.DATE == date] = cross_slice.fillna(0)
     # rank-normalize all characteristics into the interval [-1, 1]
-    cross_slice.loc[cross_slice.DATE == date, charas] = ((cross_slice - cross_slice.min()) / (cross_slice.max() - cross_slice.min()))[charas].fillna(0.5) * 2 - 1
+    cross_slice.loc[cross_slice.DATE == date, charas] = (((cross_slice - cross_slice.min()) / (cross_slice.max() - cross_slice.min()))[charas].fillna(0.5) * 2 - 1).astype(np.float16)
     
     return cross_slice
 
@@ -88,10 +102,11 @@ if __name__ == '__main__':
     processed_df = pd.concat(processed_df)
     processed_df[['permno', 'DATE']] = processed_df[['permno', 'DATE']].astype(int)
 
-    # calculate portfolio returns
-    iter_list = list(product(datashare.DATE.drop_duplicates(), charas))
-    portfolio_rets = Parallel(n_jobs=-1)(delayed(cal_portfolio_ret)(it, df=processed_df) for it in tqdm(iter_list, colour='green', desc='Calculating'))
-    portfolio_rets = pd.DataFrame(np.array(portfolio_rets).reshape(-1, 94), index=datashare.DATE.drop_duplicates(), columns=charas).reset_index()
+    ## calculate portfolio returns
+    # iter_list = list(product(datashare.DATE.drop_duplicates(), charas))
+    # portfolio_rets = Parallel(n_jobs=-1)(delayed(cal_portfolio_ret)(it, df=processed_df) for it in tqdm(iter_list, colour='green', desc='Calculating'))
+    # portfolio_rets = pd.DataFrame(np.array(portfolio_rets).reshape(-1, 94), index=datashare.DATE.drop_duplicates(), columns=charas).reset_index()
+    # portfolio_rets[charas] = portfolio_rets[charas].astype(np.float16)
     
-    processed_df.to_csv('data/datashare_re.csv')
-    portfolio_rets.to_csv('data/portfolio_rets.csv')
+    processed_df.to_pickle('data/datashare_re.pkl')
+    # portfolio_rets.to_pickle('data/portfolio_rets.pkl')
