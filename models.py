@@ -1,16 +1,75 @@
 import torch
 from torch import nn
 
-class Model(nn.Module):
+class CA3(nn.Module):
     def __init__(self, hidden_size):
-        super(Model, self).__init__()
+        super(CA3, self).__init__()
         # P -> 32 -> 16 -> 8
         self.char_nn = nn.Sequential(
             nn.Linear(94, 32),
             nn.ReLU(),
             nn.Linear(32, 16),
             nn.ReLU(),
+            nn.Linear(16, 8)
+            nn.ReLU(),
+            nn.Linear(8, hidden_size)
+        )
+        self.pfret_nn = nn.Sequential(
+            nn.Linear(94, hidden_size)
+        )
+
+    def forward(self, char, pfret):
+        processed_char = self.char_nn(char)
+        processed_pfret = self.pfret_nn(pfret)
+        # dot product of two processed tensors
+        return torch.sum(processed_char * processed_pfret, dim=1)
+
+class CA2(nn.Module):
+    def __init__(self, hidden_size):
+        super(CA2, self).__init__()
+        # P -> 32 -> hidden_size
+        self.char_nn = nn.Sequential(
+            nn.Linear(94, 32),
+            nn.ReLU(),
+            nn.Linear(32, 16),
+            nn.ReLU(),
             nn.Linear(16, hidden_size)
+        )
+        self.pfret_nn = nn.Sequential(
+            nn.Linear(94, hidden_size)
+        )
+
+    def forward(self, char, pfret):
+        processed_char = self.char_nn(char)
+        processed_pfret = self.pfret_nn(pfret)
+        # dot product of two processed tensors
+        return torch.sum(processed_char * processed_pfret, dim=1)
+    
+class CA1(nn.Module):
+    def __init__(self, hidden_size):
+        super(CA1, self).__init__()
+        # P -> hidden_size
+        self.char_nn = nn.Sequential(
+            nn.Linear(94, 32)
+            nn.ReLU(),
+            nn.Linear(32, hidden_size)
+        )
+        self.pfret_nn = nn.Sequential(
+            nn.Linear(94, hidden_size)
+        )
+
+    def forward(self, char, pfret):
+        processed_char = self.char_nn(char)
+        processed_pfret = self.pfret_nn(pfret)
+        # dot product of two processed tensors
+        return torch.sum(processed_char * processed_pfret, dim=1)
+    
+class CA0(nn.Module):
+    def __init__(self, hidden_size):
+        super(CA0, self).__init__()
+        # P -> hidden_size
+        self.char_nn = nn.Sequential(
+            nn.Linear(94, hidden_size)
         )
         self.pfret_nn = nn.Sequential(
             nn.Linear(94, hidden_size)
@@ -88,7 +147,7 @@ def main():
     test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(character, pfret, label), batch_size=N, shuffle=True)
 
     # initialize model
-    model = Model(hidden_size=8)
+    model = CA3(hidden_size=8)
     # initialize optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     # initialize loss function
