@@ -6,7 +6,7 @@ class Model(nn.Module):
         super(Model, self).__init__()
         # P -> 32 -> 16 -> 8
         self.exposure_nn = nn.Sequential(
-            nn.Linear(95, 32),
+            nn.Linear(94, 32),
             nn.ReLU(),
             nn.Linear(32, 16),
             nn.ReLU(),
@@ -14,7 +14,7 @@ class Model(nn.Module):
             nn.ReLU()
         )
         self.factor_nn = nn.Sequential(
-            nn.Linear(95, 8),
+            nn.Linear(94, 8),
         )
 
     def forward(self, exposure, factor):
@@ -78,11 +78,11 @@ def train(model, train_loader, val_loader, optimizer, criterion, num_epochs):
 def main():
     # generate random data to train and test model
     # batch size is variable N
-    # exposure is a tensor of shape (N, 95)
-    # factor is a tensor of shape (N, 95)
+    # exposure is a tensor of shape (N, 94)
+    # factor is a tensor of shape (N, 94)
     N = 100
-    exposure = torch.randn(N, 95)
-    factor = torch.randn(N, 95)
+    exposure = torch.randn(N, 94)
+    factor = torch.randn(N, 94)
     label = torch.randn(N)
     train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(exposure, factor, label), batch_size=N, shuffle=True)
     val_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(exposure, factor, label), batch_size=N, shuffle=True)
