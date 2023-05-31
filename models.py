@@ -2,26 +2,25 @@ import torch
 from torch import nn
 
 class Model(nn.Module):
-    def __init__(self):
+    def __init__(self, hidden_size):
         super(Model, self).__init__()
         # P -> 32 -> 16 -> 8
-        self.exposure_nn = nn.Sequential(
+        self.char_nn = nn.Sequential(
             nn.Linear(94, 32),
             nn.ReLU(),
             nn.Linear(32, 16),
             nn.ReLU(),
-            nn.Linear(16, 8),
-            nn.ReLU()
+            nn.Linear(16, hidden_size)
         )
-        self.factor_nn = nn.Sequential(
-            nn.Linear(94, 8),
+        self.pfret_nn = nn.Sequential(
+            nn.Linear(94, hidden_size)
         )
 
-    def forward(self, exposure, factor):
-        processed_exposure = self.exposure_nn(exposure)
-        processed_factor = self.factor_nn(factor)
+    def forward(self, char, pfret):
+        processed_char = self.char_nn(char)
+        processed_pfret = self.pfret_nn(pfret)
         # dot product of two processed tensors
-        return torch.sum(processed_exposure * processed_factor, dim=1)
+        return torch.sum(processed_char * processed_pfret, dim=1)
 
 def epoch_train(model, train_loader, optimizer, criterion, epoch):
     # train model for one epoch
@@ -81,15 +80,15 @@ def main():
     # exposure is a tensor of shape (N, 94)
     # factor is a tensor of shape (N, 94)
     N = 100
-    exposure = torch.randn(N, 94)
-    factor = torch.randn(N, 94)
+    character = torch.randn(N, 94)
+    pfret = torch.randn(N, 94)
     label = torch.randn(N)
-    train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(exposure, factor, label), batch_size=N, shuffle=True)
-    val_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(exposure, factor, label), batch_size=N, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(exposure, factor, label), batch_size=N, shuffle=True)
+    train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(character, pfret, label), batch_size=N, shuffle=True)
+    val_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(character, pfret, label), batch_size=N, shuffle=True)
+    test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(character, pfret, label), batch_size=N, shuffle=True)
 
     # initialize model
-    model = Model()
+    model = Model(hidden_size=8)
     # initialize optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     # initialize loss function
