@@ -2,16 +2,26 @@ import torch
 from torch import nn
 
 class CA3(nn.Module):
-    def __init__(self, hidden_size):
+    def __init__(self, hidden_size, dropout):
         super(CA3, self).__init__()
         # P -> 32 -> 16 -> 8
+        self.dropout = dropout
         self.char_nn = nn.Sequential(
             nn.Linear(94, 32),
+            nn.BatchNorm1d(32),
             nn.ReLU(),
+            nn.Dropout(self.dropout),
+
             nn.Linear(32, 16),
+            nn.BatchNorm1d(16),
             nn.ReLU(),
-            nn.Linear(16, 8)
+            nn.Dropout(self.dropout),
+
+            nn.Linear(16, 8),
+            nn.BatchNorm1d(8),
             nn.ReLU(),
+            nn.Dropout(self.dropout),
+
             nn.Linear(8, hidden_size)
         )
         self.pfret_nn = nn.Sequential(
@@ -25,14 +35,21 @@ class CA3(nn.Module):
         return torch.sum(processed_char * processed_pfret, dim=1)
 
 class CA2(nn.Module):
-    def __init__(self, hidden_size):
+    def __init__(self, hidden_size, dropout):
         super(CA2, self).__init__()
+        self.dropout = dropout
         # P -> 32 -> hidden_size
         self.char_nn = nn.Sequential(
             nn.Linear(94, 32),
+            nn.BatchNorm1d(32),
             nn.ReLU(),
+            nn.Dropout(self.dropout),
+
             nn.Linear(32, 16),
+            nn.BatchNorm1d(16),
             nn.ReLU(),
+            nn.Dropout(self.dropout),
+
             nn.Linear(16, hidden_size)
         )
         self.pfret_nn = nn.Sequential(
@@ -46,12 +63,16 @@ class CA2(nn.Module):
         return torch.sum(processed_char * processed_pfret, dim=1)
     
 class CA1(nn.Module):
-    def __init__(self, hidden_size):
+    def __init__(self, hidden_size, dropout):
         super(CA1, self).__init__()
+        self.dropout = dropout
         # P -> hidden_size
         self.char_nn = nn.Sequential(
-            nn.Linear(94, 32)
+            nn.Linear(94, 32),
+            nn.BatchNorm1d(32),
             nn.ReLU(),
+            nn.Dropout(self.dropout),
+
             nn.Linear(32, hidden_size)
         )
         self.pfret_nn = nn.Sequential(
@@ -147,7 +168,7 @@ def main():
     test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(character, pfret, label), batch_size=N, shuffle=True)
 
     # initialize model
-    model = CA3(hidden_size=8)
+    model = CA3(hidden_size=8, dropout=0.5)
     # initialize optimizer
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
     # initialize loss function

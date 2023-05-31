@@ -1,0 +1,22 @@
+title: CA3
+log_dir: log
+seeds: [233, 42, 1135]
+data:
+  path: data
+  num_workers: 4
+model: 
+  name: ConditionalAutoencoder
+  in_channels: 94
+  out_channels: 20
+  hidden_channels: [32, 16, 8, 6]
+  dropout: 0.1
+  device: "cuda:0"
+  loss_fn: MSELoss
+optimizer:
+  name: Adam
+  lr: 0.005
+  scheduler: cos
+train:
+  batch_size: 16
+  num_epochs: 500
+  drop_last: False
