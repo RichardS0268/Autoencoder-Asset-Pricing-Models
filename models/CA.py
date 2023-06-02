@@ -16,6 +16,10 @@ class CA_base(modelBase):
         self.optimizer = None
         self.criterion = None
 
+        self.datashare_chara = pd.read_pickle('data/datashare_re.pkl')
+        self.portfolio_ret=  pd.read_pickle('data/portfolio_ret.pkl')
+        self.mon_ret = pd.read_pickle('data/month_ret.pkl')
+
     def __get_item(self, month):
         beta_nn_input = self.datashare_chara.loc[self.datashare_chara['DATE'] == month].set_index('permno')[charas]
         labels = self.mon_ret.loc[self.mon_ret['date'] == month].set_index('permno')['ret-rf']
@@ -27,15 +31,12 @@ class CA_base(modelBase):
     
     
     def dataloader(self, period): 
-        self.datashare_chara = pd.read_pickle('data/datashare_re.pkl')
-        self.portfolio_ret=  pd.read_pickle('data/portfolio_ret.pkl')
         mon_list = pd.read_pickle('data/mon_list.pkl')
-        self.mon_list = mon_list.loc[(mon_list >= period[0]) & (mon_list <= period[1])]
-        
+        mon_list = mon_list.loc[(mon_list >= period[0]) & (mon_list <= period[1])]
         beta_nn_input_set = []
         factor_nn_input_set = []
         label_set = []
-        for mon in self.mon_list:
+        for mon in mon_list:
             _, _beta_input, _factor_input, label =  self.__get_item(mon)
             beta_nn_input_set.append(_beta_input)
             factor_nn_input_set.append(_factor_input)
