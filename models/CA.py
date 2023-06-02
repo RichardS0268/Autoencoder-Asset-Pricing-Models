@@ -5,7 +5,7 @@ import numpy as np
 from .modelBase import modelBase
 from utils import charas
 
-MAX_EPOCH = 100
+MAX_EPOCH = 200
 LEARNING_RATE = 1e-3
 
 class CA_base(nn.Module, modelBase):
@@ -123,7 +123,7 @@ class CA_base(nn.Module, modelBase):
             else:
                 no_update_steps += 1
             
-            if no_update_steps > 10: # early stop
+            if no_update_steps > 20: # early stop
                 print(f'Early stop at epoch {i}')
                 break
         
@@ -141,9 +141,9 @@ class CA_base(nn.Module, modelBase):
     
     
     
-class CA0(CA_base, nn.Module):
+class CA0(CA_base):
     def __init__(self, hidden_size):
-        super(CA0, self).__init__('CA0')
+        CA_base.__init__(self, 'CA0')
         # P -> hidden_size
         self.beta_nn = nn.Sequential(
             nn.Linear(94, hidden_size)
@@ -154,9 +154,9 @@ class CA0(CA_base, nn.Module):
         
 
 
-class CA1(CA_base, nn.Module):
+class CA1(CA_base):
     def __init__(self, hidden_size, dropout):
-        super(CA1, self).__init__('CA1')
+        CA_base.__init__(self, 'CA1')
         self.dropout = dropout
         # P -> hidden_size
         self.beta_nn = nn.Sequential(
@@ -173,9 +173,9 @@ class CA1(CA_base, nn.Module):
         
         
         
-class CA2(CA_base, nn.Module):
+class CA2(CA_base):
     def __init__(self, hidden_size, dropout):
-        super(CA2, self).__init__('CA2')
+        CA_base.__init__(self, 'CA2')
         self.dropout = dropout
         # P -> 32 -> hidden_size
         self.beta_nn = nn.Sequential(
