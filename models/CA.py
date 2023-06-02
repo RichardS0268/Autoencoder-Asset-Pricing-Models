@@ -8,9 +8,10 @@ from utils import charas
 MAX_EPOCH = 1
 LEARNING_RATE = 1e-3
 
-class CA_base(modelBase):
+class CA_base(nn.Module, modelBase):
     def __init__(self, name):
-        super().__init__(name)
+        nn.Module.__init__(self)
+        modelBase.__init__(self, name)
         self.beta_nn = None
         self.factor_nn = None
         self.optimizer = None
@@ -22,7 +23,7 @@ class CA_base(modelBase):
 
     def __get_item(self, month):
         beta_nn_input = self.datashare_chara.loc[self.datashare_chara['DATE'] == month].set_index('permno')[charas]
-        labels = self.mon_ret.loc[self.mon_ret['date'] == month].set_index('permno')['ret-rf']
+        labels = self.mon_ret.loc[self.mon_ret['date'] == month].drop_duplicates('permno').set_index('permno')['ret-rf']
         align_df = pd.concat([beta_nn_input, labels], axis=1)
         factor_nn_input = self.portfolio_ret.loc[self.portfolio_ret['DATE'] == month][charas].T.values        
         
@@ -62,6 +63,10 @@ class CA_base(modelBase):
             beta_nn_input = beta_nn_input_set[ind]
             factor_nn_input = factor_nn_input_set[ind]
             labels = label_set[ind]
+            # convert to tensor
+            beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32)
+            factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32)
+            labels = torch.tensor(labels, dtype=torch.float32)
 
             self.optimizer.zero_grad()
             output = self.forward(beta_nn_input, factor_nn_input)
@@ -180,10 +185,8 @@ class CA2(CA_base, nn.Module):
 
 
 
-class CA3(nn.Module, CA_base):
+class CA3(CA_base):
     def __init__(self, hidden_size, dropout):
-        # init nn.Module 
-        nn.Module.__init__(self)
         CA_base.__init__(self, 'CA3')
         # P -> 32 -> 16 -> 8
         self.dropout = dropout
