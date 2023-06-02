@@ -25,6 +25,7 @@ with zipfile.ZipFile('data.zip', 'r') as z:
     with z.open('data/month_ret.pkl') as f:
         print('Reading month_ret.pkl', end=' ')
         mon_ret = pd.read_pickle(f)    
+        mon_ret.to_pickle('data/month_ret.pkl')
         print('Done!')
         
     with z.open('data/datashare.pkl') as f:
