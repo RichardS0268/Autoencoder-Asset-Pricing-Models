@@ -25,7 +25,7 @@ class modelBase:
     def calBeta(self, month):
         '''
         Calculate specific month's beta. Should be specified by different models
-        -> return np.array, dim = (K, 1)
+        -> return np.array, dim = (N, K)
         '''
         return np.zeros([3, 1])
         pass
@@ -34,7 +34,7 @@ class modelBase:
     def calFactor(self, month):
         '''
         Calculate specific month's factor. Should be specified by different models
-        -> return np.array, dim = (N, K)
+        -> return np.array, dim = (K, 1)
         '''
         return np.zeros([1300, 3])
         pass    
@@ -47,7 +47,7 @@ class modelBase:
         
         assert mon_factor.shape[1] == mon_beta.shape[0], f"Dimension mismatch between mon_factor: {mon_factor.shape} and mon_beta: {mon_beta.shape}"
         
-        # R_{N*1} = F_{N*K} @ Beta_{K*1}
+        # R_{N*1} = Beta_{N*K} @ factor_{K*1}
         return mon_factor @ mon_beta 
         
     
@@ -61,7 +61,7 @@ class modelBase:
         
         lag_factor_list = []
         while mon_start < mon_end - relativedelta(months=1):
-            # lag_factor_{N*K}
+            # lag_factor_{K*1}
             lag_factor = self.calFactor(int(str(mon_start).split(' ')[0].replace('-', '')))
             lag_factor_list.append(lag_factor)
             mon_start += relativedelta(months=1)

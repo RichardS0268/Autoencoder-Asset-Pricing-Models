@@ -13,7 +13,7 @@ warnings.filterwarnings('ignore')
 
 
 if 'data.zip' not in os.listdir():
-    os.system('wget https://cloud.tsinghua.edu.cn/f/001a8f8ba2ba4cad9bf8/?dl=1 -O data.zip')
+    os.system('wget https://cloud.tsinghua.edu.cn/f/07d6a0223d054247af26/?dl=1 -O data.zip')
 
 if 'data' not in os.listdir():
     os.mkdir('data')
@@ -22,16 +22,16 @@ if 'data' not in os.listdir():
     
     
 with zipfile.ZipFile('data.zip', 'r') as z:    
-    with z.open('data/month_return.csv') as f:
-        print('Reading month_return.csv', end=' ')
-        mon_ret = pd.read_csv(f)    
-        mon_ret.to_pickle('data/month_return.pkl')
+    with z.open('data/month_ret.pkl') as f:
+        print('Reading month_ret.pkl', end=' ')
+        mon_ret = pd.read_pickle(f)    
         print('Done!')
         
-    with z.open('data/datashare.csv') as f:
-        print('Reading datashare.csv', end=' ')
-        datashare = pd.read_csv(f)
-        datashare.to_pickle('data/datashare.pkl')
+    with z.open('data/datashare.pkl') as f:
+        print('Reading datashare.pkl', end=' ')
+        datashare = pd.read_pickle(f)
+        datashare['DATE'].drop_duplicates().reset_index(drop=True).to_pickle('data/mon_list.pkl')
+        # datashare.to_pickle('data/datashare.pkl')
         print('Done!')
 
 
@@ -103,11 +103,25 @@ if __name__ == '__main__':
     processed_df = pd.concat(processed_df)
     processed_df[['permno', 'DATE']] = processed_df[['permno', 'DATE']].astype(int)
 
-    ## calculate portfolio returns
+    ##TODO: calculate portfolio returns (or download preprocessed data)
     # iter_list = list(product(datashare.DATE.drop_duplicates(), charas))
     # portfolio_rets = Parallel(n_jobs=-1)(delayed(cal_portfolio_ret)(it, df=processed_df) for it in tqdm(iter_list, colour='green', desc='Calculating'))
     # portfolio_rets = pd.DataFrame(np.array(portfolio_rets).reshape(-1, 94), index=datashare.DATE.drop_duplicates(), columns=charas).reset_index()
     # portfolio_rets[charas] = portfolio_rets[charas].astype(np.float16)
     
+    mon_list = []
+    permno_index = pd.Series(dtype='float64')
+    R_matrix = pd.DataFrame()
+
+    for g in tqdm(mon_ret.groupby('date'), colour='blue', desc='Generating R Matrix'):
+        mon_list.append(g[0])
+        mon_r = g[1].drop_duplicates('permno')
+        permno_index = pd.concat([permno_index, mon_r['permno']]).drop_duplicates()
+        
+        R_matrix = pd.concat([R_matrix.reindex(permno_index), mon_r.set_index('permno').reindex(permno_index)['ret-rf']], axis=1)
+        R_matrix.columns = mon_list
+        
+    
     processed_df.to_pickle('data/datashare_re.pkl')
     # portfolio_rets.to_pickle('data/portfolio_rets.pkl')
+    R_matrix.to_pickle('data/stock_R_matrix.pkl')
