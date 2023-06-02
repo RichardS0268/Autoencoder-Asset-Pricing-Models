@@ -124,6 +124,7 @@ class CA_base(nn.Module, modelBase):
         no_update_steps = 0
         valid_loss = []
         for i in range(MAX_EPOCH):
+            print(f'Epoch {i}')
             self.train()
             self.__train_one_epoch()
             
@@ -186,7 +187,7 @@ class CA_base(nn.Module, modelBase):
     
 class CA0(CA_base):
     def __init__(self, hidden_size, lr=0.001, device='cuda'):
-        CA_base.__init__(self, 'CA0', device=device)
+        CA_base.__init__(self, f'CA0_{hidden_size}', device=device)
         # P -> hidden_size
         self.beta_nn = nn.Sequential(
             nn.Linear(94, hidden_size)
@@ -202,7 +203,7 @@ class CA0(CA_base):
 
 class CA1(CA_base):
     def __init__(self, hidden_size, dropout, lr, device='cuda'):
-        CA_base.__init__(self, 'CA1', device=device)
+        CA_base.__init__(self, f'CA1_{hidden_size}', device=device)
         self.dropout = dropout
         # P -> hidden_size
         self.beta_nn = nn.Sequential(
@@ -224,7 +225,7 @@ class CA1(CA_base):
         
 class CA2(CA_base):
     def __init__(self, hidden_size, dropout=0.5, lr=0.001, device='cuda'):
-        CA_base.__init__(self, 'CA2', device=device)
+        CA_base.__init__(self, f'CA2_{hidden_size}', device=device)
         self.dropout = dropout
         # P -> 32 -> hidden_size
         self.beta_nn = nn.Sequential(
@@ -251,7 +252,7 @@ class CA2(CA_base):
 
 class CA3(CA_base):
     def __init__(self, hidden_size, dropout=0.5, lr=0.001, device='cuda'):
-        CA_base.__init__(self, 'CA3', device=device)
+        CA_base.__init__(self, f'CA3_{hidden_size}', device=device)
         # P -> 32 -> 16 -> 8
         self.dropout = dropout
 
