@@ -2,17 +2,20 @@ import torch
 from torch import nn
 import pandas as pd
 import numpy as np
-from modelBase import modelBase
-from ..data_prepare import charas
+from .modelBase import modelBase
+from utils import charas
 
+MAX_EPOCH = 1
+LEARNING_RATE = 1e-3
 
 class CA_base(modelBase):
     def __init__(self, name):
-        super(CA_base, self).__init__(name)
+        super().__init__(name)
         self.beta_nn = None
         self.factor_nn = None
-        
-        
+        self.optimizer = None
+        self.criterion = None
+
     def __get_item(self, month):
         beta_nn_input = self.datashare_chara.loc[self.datashare_chara['DATE'] == month].set_index('permno')[charas]
         labels = self.mon_ret.loc[self.mon_ret['date'] == month].set_index('permno')['ret-rf']
@@ -23,7 +26,7 @@ class CA_base(modelBase):
         return align_df.index, align_df.values[:, :-1].T, factor_nn_input, align_df.values[:, -1].T
     
     
-    def dataloader(self, period, shuffle): 
+    def dataloader(self, period): 
         self.datashare_chara = pd.read_pickle('data/datashare_re.pkl')
         self.portfolio_ret=  pd.read_pickle('data/portfolio_ret.pkl')
         mon_list = pd.read_pickle('data/mon_list.pkl')
@@ -31,19 +34,16 @@ class CA_base(modelBase):
         
         beta_nn_input_set = []
         factor_nn_input_set = []
+        label_set = []
         for mon in self.mon_list:
-            _beta_input, _factor_input =  self.__get_item(mon)
+            _, _beta_input, _factor_input, label =  self.__get_item(mon)
             beta_nn_input_set.append(_beta_input)
             factor_nn_input_set.append(_factor_input)
+            label_set.append(label)
             
         ##TODO: tensorize, shuffle (synchronously)
-        if shuffle:
-            print('shuffle')
-        
-        
-        ##TODO: 
-        return dataloader
-        
+        ## shuffle will be implemented inside of train_one_epoch
+        return beta_nn_input_set, factor_nn_input_set, label_set
 
     def forward(self, char, pfret):
         processed_char = self.beta_nn(char)
@@ -54,24 +54,52 @@ class CA_base(modelBase):
     
     ##TODO: train_one_epoch
     def __train_one_epoch(self):
-        pass
+        beta_nn_input_set, factor_nn_input_set, label_set = self.train_dataset
+        shuffled_ind = np.random.permutation(len(beta_nn_input_set))
+        epoch_loss = 0.0
+        for i, ind in enumerate(shuffled_ind):
+            beta_nn_input = beta_nn_input_set[ind]
+            factor_nn_input = factor_nn_input_set[ind]
+            labels = label_set[ind]
 
+            self.optimizer.zero_grad()
+            output = self.forward(beta_nn_input, factor_nn_input)
+            loss = self.criterion(output, labels)
+            loss.backward()
+            self.optimizer.step()
+            epoch_loss += loss.item()
 
+            if i % 100 == 0:
+                print(f'Batches: {i}, loss: {loss.item()}')
+        return epoch_loss
+
+    def __valid_one_epoch(self):
+        # run validation, no gradient calculation
+        beta_nn_input_set, factor_nn_input_set, label_set = self.valid_dataset
+        epoch_loss = 0.0
+        for i in range(len(beta_nn_input_set)):
+            beta_nn_input = beta_nn_input_set[i]
+            factor_nn_input = factor_nn_input_set[i]
+            labels = label_set[i]
+
+            output = self.forward(beta_nn_input, factor_nn_input)
+            loss = self.criterion(output, labels)
+            epoch_loss += loss.item()
+        return epoch_loss
     
-    def train(self):
-        self.train_dataset = self.dataloader(self.train_period, shuffle=True)
-        self.valid_dataset = self.dataloader(self.valid_period, shuffle=True)
+    def train_model(self):
+        self.train_dataset = self.dataloader(self.train_period)
+        self.valid_dataset = self.dataloader(self.valid_period)
         
         min_error = np.Inf
         no_update_steps = 0
+        valid_loss = []
         for i in range(MAX_EPOCH):
             self.__train_one_epoch()
             
             ##TODO, valid and early stop
-            valid_error = 0.0
-            for item in self.valid_dataset:
-                ...
-                
+            valid_error = self.__valid_one_epoch()
+            valid_loss.append(valid_error)
             if valid_error < min_error:
                 min_error = valid_error
                 no_update_steps = 0
@@ -81,7 +109,7 @@ class CA_base(modelBase):
             if no_update_steps > 2: # early stop
                 break
         
-        
+        return valid_loss
     
     def calBeta(self, month):
         _, beta_nn_input, _, _ = self.__get_item(month)
@@ -151,11 +179,14 @@ class CA2(CA_base, nn.Module):
 
 
 
-class CA3(CA_base, nn.Module):
+class CA3(nn.Module, CA_base):
     def __init__(self, hidden_size, dropout):
-        super(CA3, self).__init__('CA3')
+        # init nn.Module 
+        nn.Module.__init__(self)
+        CA_base.__init__(self, 'CA3')
         # P -> 32 -> 16 -> 8
         self.dropout = dropout
+
         self.beta_nn = nn.Sequential(
             nn.Linear(94, 32),
             nn.BatchNorm1d(32),
@@ -177,6 +208,7 @@ class CA3(CA_base, nn.Module):
         self.factor_nn = nn.Sequential(
             nn.Linear(94, hidden_size)
         )
+        
 
 # def epoch_train(model, train_loader, optimizer, criterion, epoch):
 #     # train model for one epoch
