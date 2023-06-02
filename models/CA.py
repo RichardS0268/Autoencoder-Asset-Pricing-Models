@@ -123,10 +123,12 @@ class CA_base(nn.Module, modelBase):
         min_error = np.Inf
         no_update_steps = 0
         valid_loss = []
+        train_loss = []
         for i in range(MAX_EPOCH):
             print(f'Epoch {i}')
             self.train()
-            self.__train_one_epoch()
+            train_error = self.__train_one_epoch()
+            train_loss.append(train_error)
             
             self.eval()
             ##TODO, valid and early stop
@@ -141,7 +143,7 @@ class CA_base(nn.Module, modelBase):
             if no_update_steps > 15: # early stop
                 print(f'Early stop at epoch {i}')
                 break
-        return valid_loss
+        return train_loss, valid_loss
     
     def test_model(self):
         beta, factor, label = self.test_dataset

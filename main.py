@@ -7,9 +7,9 @@ model = CA3(6, 0.5).to('cuda')
 # model.optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 # model.criterion = nn.MSELoss().to('cuda')
 
-valid_loss = model.train_model()
-print(valid_loss)
-
-plt.plot(valid_loss)
+train_loss, valid_loss = model.train_model()
+plt.plot(train_loss, label='train') 
+plt.plot(valid_loss, label='valid')
+plt.legend()
 plt.show()
-plt.savefig('loss.png')
+
