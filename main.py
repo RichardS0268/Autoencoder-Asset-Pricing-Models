@@ -4,8 +4,8 @@ from torch import nn
 from matplotlib import pyplot as plt
 
 model = CA3(6, 0.5).to('cuda')
-model.optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
-model.criterion = nn.MSELoss().to('cuda')
+# model.optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+# model.criterion = nn.MSELoss().to('cuda')
 
 valid_loss = model.train_model()
 print(valid_loss)

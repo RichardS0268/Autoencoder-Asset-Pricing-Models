@@ -172,6 +172,9 @@ class CA0(CA_base):
         self.factor_nn = nn.Sequential(
             nn.Linear(94, hidden_size)
         )
+
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE)
+        self.criterion = nn.MSELoss().to(self.device)
         
 
 
@@ -191,6 +194,9 @@ class CA1(CA_base):
         self.factor_nn = nn.Sequential(
             nn.Linear(94, hidden_size)
         )
+        
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE)
+        self.criterion = nn.MSELoss().to(self.device)
         
         
         
@@ -215,6 +221,9 @@ class CA2(CA_base):
         self.factor_nn = nn.Sequential(
             nn.Linear(94, hidden_size)
         )
+
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE)
+        self.criterion = nn.MSELoss().to(self.device)
 
 
 
@@ -246,6 +255,8 @@ class CA3(CA_base):
             nn.Linear(94, hidden_size)
         )
         
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE)
+        self.criterion = nn.MSELoss().to(self.device)
 
 # def epoch_train(model, train_loader, optimizer, criterion, epoch):
 #     # train model for one epoch
