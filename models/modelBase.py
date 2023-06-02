@@ -71,9 +71,4 @@ class modelBase:
         self.train_period[1] += 10000
         self.valid_period = (pd.Series(self.valid_period) + 10000).to_list()
         self.test_period = (pd.Series(self.test_period) + 10000).to_list()
-
-        self.train()
-        
-        self.train_idx += 1
-        print(f'Model has been refitted [{self.train_idx}]')
         
