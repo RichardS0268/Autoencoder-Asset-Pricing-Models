@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 from .modelBase import modelBase
 from utils import charas
+import datetime
+from dateutil.relativedelta import relativedelta
 
 MAX_EPOCH = 200
 LEARNING_RATE = 1e-3
@@ -160,8 +162,12 @@ class CA_base(nn.Module, modelBase):
         _, _, factor_nn_input, _ = self.__get_item(month)
         return self.factor_nn(factor_nn_input)
     
-    
-    
+    def cal_delayed_Factor(self, month):
+        # calculate the last day of previous month
+        prev_month = datetime.datetime.strptime(str(month), '%Y%m%d') - relativedelta(months=1)
+        prev_month = int(prev_month.strftime('%Y%m%d'))
+        _, _, factor_nn_input, _ = self.__get_item(prev_month)
+        return self.factor_nn(factor_nn_input)
     
 class CA0(CA_base):
     def __init__(self, hidden_size, lr=0.001, device='cuda'):
