@@ -7,7 +7,7 @@ from utils import charas
 import datetime
 from dateutil.relativedelta import relativedelta
 
-MAX_EPOCH = 200
+MAX_EPOCH = 20
 LEARNING_RATE = 1e-3
 
 class CA_base(nn.Module, modelBase):
@@ -25,7 +25,7 @@ class CA_base(nn.Module, modelBase):
         self.portfolio_ret=  pd.read_pickle('./data/portfolio_ret.pkl').astype(np.float64)
         self.mon_ret = pd.read_pickle('./data/month_ret.pkl').astype(np.float64)
 
-    def __get_item(self, month):
+    def _get_item(self, month):
         beta_nn_input = self.datashare_chara.loc[self.datashare_chara['DATE'] == month].set_index('permno')[charas]
         labels = self.mon_ret.loc[self.mon_ret['date'] == month].drop_duplicates('permno').set_index('permno')['ret-rf']
         align_df = pd.concat([beta_nn_input, labels], axis=1).dropna()
@@ -44,7 +44,7 @@ class CA_base(nn.Module, modelBase):
         factor_nn_input_set = []
         label_set = []
         for mon in mon_list:
-            _, _beta_input, _factor_input, label =  self.__get_item(mon)
+            _, _beta_input, _factor_input, label =  self._get_item(mon)
             beta_nn_input_set.append(_beta_input)
             factor_nn_input_set.append(_factor_input)
             label_set.append(label)
@@ -83,7 +83,8 @@ class CA_base(nn.Module, modelBase):
             epoch_loss += loss.item()
 
             if i % 100 == 0:
-                print(f'Batches: {i}, loss: {loss.item()}')
+                # print(f'Batches: {i}, loss: {loss.item()}')
+                pass
         return epoch_loss / len(beta_nn_input_set)
 
     def __valid_one_epoch(self):
@@ -127,10 +128,9 @@ class CA_base(nn.Module, modelBase):
             else:
                 no_update_steps += 1
             
-            if no_update_steps > 20: # early stop
+            if no_update_steps > 15: # early stop
                 print(f'Early stop at epoch {i}')
                 break
-        self.test_model()
         return valid_loss
     
     def test_model(self):
@@ -154,19 +154,25 @@ class CA_base(nn.Module, modelBase):
 
 
     def calBeta(self, month):
-        _, beta_nn_input, _, _ = self.__get_item(month)
+        _, beta_nn_input, _, _ = self._get_item(month)
+        
+        beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
         return self.beta_nn(beta_nn_input)
     
     
     def calFactor(self, month):
-        _, _, factor_nn_input, _ = self.__get_item(month)
+        _, _, factor_nn_input, _ = self._get_item(month)
+
+        factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
         return self.factor_nn(factor_nn_input)
     
     def cal_delayed_Factor(self, month):
         # calculate the last day of previous month
         prev_month = datetime.datetime.strptime(str(month), '%Y%m%d') - relativedelta(months=1)
         prev_month = int(prev_month.strftime('%Y%m%d'))
-        _, _, factor_nn_input, _ = self.__get_item(prev_month)
+        _, _, factor_nn_input, _ = self._get_item(prev_month)
+
+        factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
         return self.factor_nn(factor_nn_input)
     
 class CA0(CA_base):
