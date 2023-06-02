@@ -9,14 +9,15 @@ MAX_EPOCH = 200
 LEARNING_RATE = 1e-3
 
 class CA_base(nn.Module, modelBase):
-    def __init__(self, name):
+    def __init__(self, name, device='cuda'):
         nn.Module.__init__(self)
         modelBase.__init__(self, name)
         self.beta_nn = None
         self.factor_nn = None
         self.optimizer = None
         self.criterion = None
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
+        self.device = device
 
         self.datashare_chara = pd.read_pickle('./data/datashare_re.pkl').astype(np.float64)
         self.portfolio_ret=  pd.read_pickle('./data/portfolio_ret.pkl').astype(np.float64)
@@ -163,8 +164,8 @@ class CA_base(nn.Module, modelBase):
     
     
 class CA0(CA_base):
-    def __init__(self, hidden_size):
-        CA_base.__init__(self, 'CA0')
+    def __init__(self, hidden_size, lr=0.001, device='cuda'):
+        CA_base.__init__(self, 'CA0', device=device)
         # P -> hidden_size
         self.beta_nn = nn.Sequential(
             nn.Linear(94, hidden_size)
@@ -173,14 +174,14 @@ class CA0(CA_base):
             nn.Linear(94, hidden_size)
         )
 
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE)
-        self.criterion = nn.MSELoss().to(self.device)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        self.criterion = nn.MSELoss().to(device)
         
 
 
 class CA1(CA_base):
-    def __init__(self, hidden_size, dropout):
-        CA_base.__init__(self, 'CA1')
+    def __init__(self, hidden_size, dropout, lr, device='cuda'):
+        CA_base.__init__(self, 'CA1', device=device)
         self.dropout = dropout
         # P -> hidden_size
         self.beta_nn = nn.Sequential(
@@ -195,14 +196,14 @@ class CA1(CA_base):
             nn.Linear(94, hidden_size)
         )
         
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE)
-        self.criterion = nn.MSELoss().to(self.device)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        self.criterion = nn.MSELoss().to(device)
         
         
         
 class CA2(CA_base):
-    def __init__(self, hidden_size, dropout):
-        CA_base.__init__(self, 'CA2')
+    def __init__(self, hidden_size, dropout=0.5, lr=0.001, device='cuda'):
+        CA_base.__init__(self, 'CA2', device=device)
         self.dropout = dropout
         # P -> 32 -> hidden_size
         self.beta_nn = nn.Sequential(
@@ -222,14 +223,14 @@ class CA2(CA_base):
             nn.Linear(94, hidden_size)
         )
 
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE)
-        self.criterion = nn.MSELoss().to(self.device)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        self.criterion = nn.MSELoss().to(device)
 
 
 
 class CA3(CA_base):
-    def __init__(self, hidden_size, dropout):
-        CA_base.__init__(self, 'CA3')
+    def __init__(self, hidden_size, dropout=0.5, lr=0.001, device='cuda'):
+        CA_base.__init__(self, 'CA3', device=device)
         # P -> 32 -> 16 -> 8
         self.dropout = dropout
 
@@ -255,88 +256,5 @@ class CA3(CA_base):
             nn.Linear(94, hidden_size)
         )
         
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=LEARNING_RATE)
-        self.criterion = nn.MSELoss().to(self.device)
-
-# def epoch_train(model, train_loader, optimizer, criterion, epoch):
-#     # train model for one epoch
-#     model.train()
-#     train_loss = 0
-#     for batch_idx, (exposure, factor, label) in enumerate(train_loader):
-#         optimizer.zero_grad()
-#         output = model(exposure, factor)
-#         loss = criterion(output, label)
-#         loss.backward()
-#         optimizer.step()
-#         train_loss += loss.item()
-#         if batch_idx % 100 == 0:
-#             print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(epoch,
-#                 batch_idx * len(exposure),
-#                 len(train_loader.dataset),
-#                 100. * batch_idx / len(train_loader),
-#                 loss.item()))
-#     print('====> Epoch: {} Average loss: {:.4f}'.format(epoch, train_loss / len(train_loader.dataset)))
-
-
-# def epoch_val(model, val_loader, criterion):
-#     # validate model for one epoch
-#     model.eval()
-#     val_loss = 0
-#     with torch.no_grad():
-#         for exposure, factor, label in val_loader:
-#             output = model(exposure, factor)
-#             val_loss += criterion(output, label).item()
-#     val_loss /= len(val_loader.dataset)
-#     print('====> Validation set loss: {:.4f}'.format(val_loss))
-#     return val_loss
-
-
-# def test(model, test_loader):
-#     # test model
-#     model.eval()
-#     with torch.no_grad():
-#         for exposure, factor, label in test_loader:
-#             output = model(exposure, factor)
-#             print(output)
-#             print(label)
-#             break
-
-
-# def train(model, train_loader, val_loader, optimizer, criterion, num_epochs):
-#     # train model for num_epochs
-#     train_loss_list = []
-#     val_loss_list = []
-#     for epoch in range(1, num_epochs + 1):
-#         epoch_train(model, train_loader, optimizer, criterion, epoch)
-#         val_loss = epoch_val(model, val_loader, criterion)
-#         train_loss_list.append(epoch)
-#         val_loss_list.append(val_loss)
-#     return train_loss_list, val_loss_list
-
-def main():
-    # generate random data to train and test model
-    # batch size is variable N
-    # exposure is a tensor of shape (N, 94)
-    # factor is a tensor of shape (N, 94)
-    N = 100
-    character = torch.randn(N, 94)
-    pfret = torch.randn(N, 94)
-    label = torch.randn(N)
-    train_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(character, pfret, label), batch_size=N, shuffle=True)
-    val_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(character, pfret, label), batch_size=N, shuffle=True)
-    test_loader = torch.utils.data.DataLoader(torch.utils.data.TensorDataset(character, pfret, label), batch_size=N, shuffle=True)
-
-    # initialize model
-    model = CA3(hidden_size=8, dropout=0.5)
-    # initialize optimizer
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
-    # initialize loss function
-    criterion = nn.MSELoss()
-
-    # train model
-    train_loss_list, val_loss_list = train(model, train_loader, val_loader, optimizer, criterion, 10)
-    # test model
-    test(model, test_loader)
-
-if __name__ == '__main__':
-    main()
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        self.criterion = nn.MSELoss().to(device)
