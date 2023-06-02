@@ -19,17 +19,17 @@ class FF(modelBase):
         
     
     def __prepare_FFf(self):
-        ff5 = pd.read_csv('../data/ff5.csv', index_col=0)
-        UMD = pd.read_csv('../data/UMD.csv', index_col=0)
+        ff5 = pd.read_csv('data/ff5.csv', index_col=0)
+        UMD = pd.read_csv('data/UMD.csv', index_col=0)
         UMD.columns = ['UMD']
         FFf = pd.concat([ff5, UMD.loc[196307:]], axis=1)
         self.fname = ['Mkt-RF', 'SMB', 'HML', 'CMA', 'RMW', 'UMD']
         self.FFf = FFf[self.fname]
-        self.portfolio_ret = pd.read_pickle('../data/portfolio_ret.pkl')
+        self.portfolio_ret = pd.read_pickle('data/portfolio_ret.pkl')
         self.portfolio_ret['DATE'] = self.portfolio_ret['DATE'].apply(lambda x: x//100)
         
     
-    def train(self):
+    def train_model(self):
         self.beta_matrix = []
         X = self.FFf[self.fname[:self.K]].loc[self.train_period[0]//100:self.train_period[1]//100]
         for col in charas:
