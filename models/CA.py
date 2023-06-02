@@ -5,7 +5,7 @@ import numpy as np
 from .modelBase import modelBase
 from utils import charas
 
-MAX_EPOCH = 1
+MAX_EPOCH = 20
 LEARNING_RATE = 1e-3
 
 class CA_base(nn.Module, modelBase):
@@ -64,8 +64,8 @@ class CA_base(nn.Module, modelBase):
             factor_nn_input = factor_nn_input_set[ind]
             labels = label_set[ind]
             # convert to tensor
-            beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32)
-            factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32)
+            beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T
+            factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T
             labels = torch.tensor(labels, dtype=torch.float32)
 
             self.optimizer.zero_grad()
@@ -87,6 +87,11 @@ class CA_base(nn.Module, modelBase):
             beta_nn_input = beta_nn_input_set[i]
             factor_nn_input = factor_nn_input_set[i]
             labels = label_set[i]
+
+            # convert to tensor
+            beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T
+            factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T
+            labels = torch.tensor(labels, dtype=torch.float32)
 
             output = self.forward(beta_nn_input, factor_nn_input)
             loss = self.criterion(output, labels)
