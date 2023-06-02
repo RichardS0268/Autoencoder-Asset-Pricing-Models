@@ -31,6 +31,7 @@ with zipfile.ZipFile('data.zip', 'r') as z:
     with z.open('data/datashare.csv') as f:
         print('Reading datashare.csv', end=' ')
         datashare = pd.read_csv(f)
+        datashare.to_pickle('data/datashare.pkl')
         print('Done!')
 
 
