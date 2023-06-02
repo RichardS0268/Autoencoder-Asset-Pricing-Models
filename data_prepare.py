@@ -103,7 +103,6 @@ if __name__ == '__main__':
     p_charas = _portfolio_chara_set[0].copy(deep=False)
     for tdf in _portfolio_chara_set[1:]:
         p_charas = pd.concat([p_charas, tdf])
-    p_charas.to_pickle('data/p_charas.pkl')
     
     
     mon_list = []
@@ -121,4 +120,5 @@ if __name__ == '__main__':
     
     processed_df.to_pickle('data/datashare_re.pkl')
     # portfolio_rets.to_pickle('data/portfolio_rets.pkl')
+    p_charas.to_pickle('data/p_charas.pkl')
     R_matrix.to_pickle('data/stock_R_matrix.pkl')
