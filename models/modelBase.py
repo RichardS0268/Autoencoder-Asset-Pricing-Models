@@ -72,3 +72,4 @@ class modelBase:
         self.valid_period = (pd.Series(self.valid_period) + 10000).to_list()
         self.test_period = (pd.Series(self.test_period) + 10000).to_list()
         
+        
