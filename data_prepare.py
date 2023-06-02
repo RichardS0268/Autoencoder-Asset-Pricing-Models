@@ -69,6 +69,21 @@ def cal_portfolio_ret(it, df):
     return chara_ret
 
 
+def cal_portfolio_charas(month, df):
+    mon_portfolio_chara = []
+    p_name = ['p_' + chr for chr in charas]
+    for chr in charas:
+        long_portfolio = df.loc[df.DATE == month].sort_values(by=chr, ascending=False).reset_index(drop=True)[:df.loc[df.DATE == month].shape[0]//10]['permno'].to_list()
+        short_portfolio = df.loc[df.DATE == month].sort_values(by=chr, ascending=False).reset_index(drop=True)[-df.loc[df.DATE == month].shape[0]//10:]['permno'].to_list()
+        
+        long_charas = df.loc[df.DATE == month].set_index('permno').loc[long_portfolio][charas]
+        short_charas = df.loc[df.DATE == month].set_index('permno').loc[short_portfolio][charas]
+        
+        mon_portfolio_chara.append([month] + (0.5*(long_charas.mean() - short_charas.mean())).to_list())
+
+    return pd.DataFrame(mon_portfolio_chara, index=p_name, columns=['DATE']+charas)
+
+
 
 if __name__ == '__main__':
     # pre-process share data
@@ -81,6 +96,15 @@ if __name__ == '__main__':
     # portfolio_rets = Parallel(n_jobs=-1)(delayed(cal_portfolio_ret)(it, df=processed_df) for it in tqdm(iter_list, colour='green', desc='Calculating'))
     # portfolio_rets = pd.DataFrame(np.array(portfolio_rets).reshape(-1, 94), index=datashare.DATE.drop_duplicates(), columns=charas).reset_index()
     # portfolio_rets[charas] = portfolio_rets[charas].astype(np.float16)
+    
+    
+    mon_list = pd.read_pickle('data/mon_list.pkl')
+    _portfolio_chara_set = Parallel(n_jobs=-1)(delayed(cal_portfolio_charas)(mon, df=processed_df) for mon in tqdm(mon_list[:3], colour='yellow', desc='Calculating P characteristics'))
+    p_charas = _portfolio_chara_set[0].copy(deep=False)
+    for tdf in _portfolio_chara_set[1:]:
+        p_charas = pd.concat([p_charas, tdf])
+    p_charas.to_pickle('data/p_charas.pkl')
+    
     
     mon_list = []
     permno_index = pd.Series(dtype='float64')
