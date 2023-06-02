@@ -115,6 +115,7 @@ class CA_base(nn.Module, modelBase):
         no_update_steps = 0
         valid_loss = []
         for i in range(MAX_EPOCH):
+            print(f'Epoch {i}')
             self.train()
             self.__train_one_epoch()
             
