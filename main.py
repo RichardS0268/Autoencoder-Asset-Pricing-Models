@@ -9,3 +9,7 @@ model.criterion = nn.MSELoss().to('cuda')
 
 valid_loss = model.train_model()
 print(valid_loss)
+
+plt.plot(valid_loss)
+plt.show()
+plt.savefig('loss.png')
