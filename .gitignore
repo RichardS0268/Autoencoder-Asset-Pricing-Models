@@ -4,3 +4,4 @@ data.zip
 __MACOSX/
 new_data.zip
 __pycache__
+models/__pycache__
