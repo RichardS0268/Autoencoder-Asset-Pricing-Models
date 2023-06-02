@@ -105,6 +105,7 @@ class CA_base(nn.Module, modelBase):
     def train_model(self):
         self.train_dataset = self.dataloader(self.train_period)
         self.valid_dataset = self.dataloader(self.valid_period)
+        self.test_dataset = self.dataloader(self.test_period)
         
         min_error = np.Inf
         no_update_steps = 0
@@ -126,9 +127,29 @@ class CA_base(nn.Module, modelBase):
             if no_update_steps > 20: # early stop
                 print(f'Early stop at epoch {i}')
                 break
-        
+        self.test_model()
         return valid_loss
     
+    def test_model(self):
+        beta, factor, label = self.test_dataset
+        i = np.random.randint(len(beta))
+        beta_nn_input = beta[i]
+        factor_nn_input = factor[i]
+        labels = label[i]
+
+        # convert to tensor
+        beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
+        factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
+        labels = torch.tensor(labels, dtype=torch.float32).T.to(self.device)
+
+        output = self.forward(beta_nn_input, factor_nn_input)
+        loss = self.criterion(output, labels)
+        print(f'Test loss: {loss.item()}')
+        print(f'Predicted: {output}')
+        print(f'Ground truth: {labels}')
+        return output, labels
+
+
     def calBeta(self, month):
         _, beta_nn_input, _, _ = self.__get_item(month)
         return self.beta_nn(beta_nn_input)
