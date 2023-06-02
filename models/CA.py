@@ -11,24 +11,33 @@ MAX_EPOCH = 20
 LEARNING_RATE = 1e-3
 
 class CA_base(nn.Module, modelBase):
-    def __init__(self, name, device='cuda'):
+    def __init__(self, name, device='cuda', portfolio=True):
         nn.Module.__init__(self)
         modelBase.__init__(self, name)
         self.beta_nn = None
         self.factor_nn = None
         self.optimizer = None
         self.criterion = None
+        self.portfolio = portfolio
 
         self.device = device
 
         self.datashare_chara = pd.read_pickle('./data/datashare_re.pkl').astype(np.float64)
+        self.p_charas = pd.read_pickle('./data/p_charas.pkl').astype(np.float64).reset_index()
         self.portfolio_ret=  pd.read_pickle('./data/portfolio_ret.pkl').astype(np.float64)
         self.mon_ret = pd.read_pickle('./data/month_ret.pkl').astype(np.float64)
 
     def _get_item(self, month):
-        beta_nn_input = self.datashare_chara.loc[self.datashare_chara['DATE'] == month].set_index('permno')[charas]
-        labels = self.mon_ret.loc[self.mon_ret['date'] == month].drop_duplicates('permno').set_index('permno')['ret-rf']
-        align_df = pd.concat([beta_nn_input, labels], axis=1).dropna()
+        if not self.portfolio:
+            beta_nn_input = self.datashare_chara.loc[self.datashare_chara['DATE'] == month].set_index('permno')[charas]
+            labels = self.mon_ret.loc[self.mon_ret['date'] == month].drop_duplicates('permno').set_index('permno')['ret-rf']
+            align_df = pd.concat([beta_nn_input, labels], axis=1).dropna()
+        else: 
+            beta_nn_input = self.p_charas.loc[self.p_charas['DATE'] == month][charas] # (94, 94)
+            labels = self.portfolio_ret.loc[self.portfolio_ret['DATE'] == month][charas].T.values # (94, 1)
+            beta_nn_input['ret-rf'] = labels
+            align_df = beta_nn_input.copy(deep=False).dropna()
+            
         factor_nn_input = self.portfolio_ret.loc[self.portfolio_ret['DATE'] == month][charas].T.values     
         # exit(0) if there is any nan in align_df
         if align_df.isnull().values.any():

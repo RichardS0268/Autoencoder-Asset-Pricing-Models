@@ -99,7 +99,7 @@ if __name__ == '__main__':
     
     
     mon_list = pd.read_pickle('data/mon_list.pkl')
-    _portfolio_chara_set = Parallel(n_jobs=-1)(delayed(cal_portfolio_charas)(mon, df=processed_df) for mon in tqdm(mon_list[:3], colour='yellow', desc='Calculating P characteristics'))
+    _portfolio_chara_set = Parallel(n_jobs=-1)(delayed(cal_portfolio_charas)(mon, df=processed_df) for mon in tqdm(mon_list, colour='yellow', desc='Calculating P characteristics'))
     p_charas = _portfolio_chara_set[0].copy(deep=False)
     for tdf in _portfolio_chara_set[1:]:
         p_charas = pd.concat([p_charas, tdf])
