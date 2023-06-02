@@ -14,7 +14,7 @@ class modelBase:
         self.test_period  = [19870101, 19871231]
     
     
-    def train(self):
+    def train_model(self):
         # print('trained')
         pass
 

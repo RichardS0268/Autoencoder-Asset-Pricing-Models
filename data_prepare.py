@@ -18,7 +18,12 @@ if 'data.zip' not in os.listdir():
 if 'data' not in os.listdir():
     os.mkdir('data')
     os.system('wget https://cloud.tsinghua.edu.cn/f/179082ecf0f147a4840c/?dl=1 -O portfolio_ret.pkl')
+    os.system('wget https://cloud.tsinghua.edu.cn/f/b93c6ae7e2014d3a951e/?dl=1 -O ff5.csv')
+    os.system('wget https://cloud.tsinghua.edu.cn/f/5f077be9eda0428ab7e5/?dl=1 -O UMD.csv')
+    
     os.system('mv portfolio_ret.pkl data')
+    os.system('mv ff5.csv data')
+    os.system('mv UMD.csv data')
     
     
 with zipfile.ZipFile('data.zip', 'r') as z:    
