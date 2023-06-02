@@ -5,7 +5,7 @@ import numpy as np
 from .modelBase import modelBase
 from utils import charas
 
-MAX_EPOCH = 20
+MAX_EPOCH = 100
 LEARNING_RATE = 1e-3
 
 class CA_base(nn.Module, modelBase):
@@ -16,17 +16,20 @@ class CA_base(nn.Module, modelBase):
         self.factor_nn = None
         self.optimizer = None
         self.criterion = None
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        self.datashare_chara = pd.read_pickle('data/datashare_re.pkl')
-        self.portfolio_ret=  pd.read_pickle('data/portfolio_ret.pkl')
-        self.mon_ret = pd.read_pickle('data/month_ret.pkl')
+        self.datashare_chara = pd.read_pickle('./data/datashare_re.pkl').astype(np.float64)
+        self.portfolio_ret=  pd.read_pickle('./data/portfolio_ret.pkl').astype(np.float64)
+        self.mon_ret = pd.read_pickle('./data/month_ret.pkl').astype(np.float64)
 
     def __get_item(self, month):
         beta_nn_input = self.datashare_chara.loc[self.datashare_chara['DATE'] == month].set_index('permno')[charas]
         labels = self.mon_ret.loc[self.mon_ret['date'] == month].drop_duplicates('permno').set_index('permno')['ret-rf']
-        align_df = pd.concat([beta_nn_input, labels], axis=1)
-        factor_nn_input = self.portfolio_ret.loc[self.portfolio_ret['DATE'] == month][charas].T.values        
-        
+        align_df = pd.concat([beta_nn_input, labels], axis=1).dropna()
+        factor_nn_input = self.portfolio_ret.loc[self.portfolio_ret['DATE'] == month][charas].T.values     
+        # exit(0) if there is any nan in align_df
+        if align_df.isnull().values.any():
+            assert False, f'There is nan in align_df of : {month}'
         # return stock index (N), beta_nn_input (94*N), factor_nn_input (94*1), labels (N, )
         return align_df.index, align_df.values[:, :-1].T, factor_nn_input, align_df.values[:, -1].T
     
@@ -64,20 +67,21 @@ class CA_base(nn.Module, modelBase):
             factor_nn_input = factor_nn_input_set[ind]
             labels = label_set[ind]
             # convert to tensor
-            beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T
-            factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T
-            labels = torch.tensor(labels, dtype=torch.float32)
+            beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
+            factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
+            labels = torch.tensor(labels, dtype=torch.float32).to(self.device)
 
             self.optimizer.zero_grad()
             output = self.forward(beta_nn_input, factor_nn_input)
             loss = self.criterion(output, labels)
+            
             loss.backward()
             self.optimizer.step()
             epoch_loss += loss.item()
 
             if i % 100 == 0:
                 print(f'Batches: {i}, loss: {loss.item()}')
-        return epoch_loss
+        return epoch_loss / len(beta_nn_input_set)
 
     def __valid_one_epoch(self):
         # run validation, no gradient calculation
@@ -89,14 +93,14 @@ class CA_base(nn.Module, modelBase):
             labels = label_set[i]
 
             # convert to tensor
-            beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T
-            factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T
-            labels = torch.tensor(labels, dtype=torch.float32)
+            beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
+            factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
+            labels = torch.tensor(labels, dtype=torch.float32).T.to(self.device)
 
             output = self.forward(beta_nn_input, factor_nn_input)
             loss = self.criterion(output, labels)
             epoch_loss += loss.item()
-        return epoch_loss
+        return epoch_loss / len(beta_nn_input_set)
     
     def train_model(self):
         self.train_dataset = self.dataloader(self.train_period)
@@ -106,8 +110,10 @@ class CA_base(nn.Module, modelBase):
         no_update_steps = 0
         valid_loss = []
         for i in range(MAX_EPOCH):
+            self.train()
             self.__train_one_epoch()
             
+            self.eval()
             ##TODO, valid and early stop
             valid_error = self.__valid_one_epoch()
             valid_loss.append(valid_error)
@@ -117,7 +123,8 @@ class CA_base(nn.Module, modelBase):
             else:
                 no_update_steps += 1
             
-            if no_update_steps > 2: # early stop
+            if no_update_steps > 10: # early stop
+                print(f'Early stop at epoch {i}')
                 break
         
         return valid_loss
