@@ -7,7 +7,7 @@ from utils import charas
 import datetime
 from dateutil.relativedelta import relativedelta
 
-MAX_EPOCH = 20
+MAX_EPOCH = 200
 LEARNING_RATE = 1e-3
 
 class CA_base(nn.Module, modelBase):
@@ -125,7 +125,7 @@ class CA_base(nn.Module, modelBase):
         valid_loss = []
         train_loss = []
         for i in range(MAX_EPOCH):
-            print(f'Epoch {i}')
+            # print(f'Epoch {i}')
             self.train()
             train_error = self.__train_one_epoch()
             train_loss.append(train_error)
@@ -176,7 +176,7 @@ class CA_base(nn.Module, modelBase):
         _, _, factor_nn_input, _ = self._get_item(month)
 
         factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
-        return self.factor_nn(factor_nn_input)
+        return self.factor_nn(factor_nn_input).T
     
     def cal_delayed_Factor(self, month):
         # calculate the last day of previous month
@@ -185,7 +185,7 @@ class CA_base(nn.Module, modelBase):
         _, _, factor_nn_input, _ = self._get_item(prev_month)
 
         factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
-        return self.factor_nn(factor_nn_input)
+        return self.factor_nn(factor_nn_input).T
     
 class CA0(CA_base):
     def __init__(self, hidden_size, lr=0.001, device='cuda'):
