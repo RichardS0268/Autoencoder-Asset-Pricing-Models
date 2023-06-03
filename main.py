@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 import gc
 import os
 
-from models.CA import CA0, CA1, CA2
+from models.CA import CA0, CA1, CA2, CA3
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -30,7 +30,7 @@ def model_inference_and_predict_CA(model):
             m_stock_index, _, _, _ = model._get_item(m)
             stock_index = pd.concat([stock_index, pd.Series(m_stock_index)]).drop_duplicates().astype(int)
             inference_R = model.inference(m) # return (N, 1)
-            predict_R = model.inference(m) # reutrn (N, 1)
+            predict_R = model.predict(m) # reutrn (N, 1)
 
             # move inference_R and predict_R to cpu
             inference_R = inference_R.cpu().detach().numpy()
@@ -123,37 +123,36 @@ def git_push(message):
     os.system('git push')
 
 def main():
-    # CA0
-    CA0_list = []
+    # CA3
     for k in range(6):
         gc.collect()
-        CA0_list.append(CA0(k+1).to('cuda'))
-        model_inference_and_predict_CA(CA0_list[k])
+        model_inference_and_predict_CA(CA3(k+1).to('cuda'))
+    # CA0
+    for k in range(6):
+        gc.collect()
+        
+        model_inference_and_predict_CA(CA0(k+1).to('cuda'))
 
     git_push("update: CA0 results")
 
     # CA1
-    CA1_list = []
     for k in range(6):
         gc.collect()
-        CA1_list.append(CA1(k+1).to('cuda'))
-        model_inference_and_predict_CA(CA1_list[k])
+        model_inference_and_predict_CA(CA1(k+1).to('cuda'))
 
     git_push("update: CA1 results")
 
     # CA2
-    CA2_list = []
     for k in range(6):
         gc.collect()
-        CA2_list.append(CA2(k+1).to('cuda'))
-        model_inference_and_predict_CA(CA2_list[k])
+        model_inference_and_predict_CA(CA2(k+1).to('cuda'))
 
     git_push("update: CA2 results")
 
     # calc R2
     # R2 is a dataframe with index = layer
     R2 = pd.DataFrame()
-    for l in range(3):
+    for l in range(4):
         for k in range(6):
             R2[f'CA{l}_{k+1}'] = calculate_R2(f'CA{l}_{k+1}', 'inference')
             alpha_plot(f'CA{l}_{k+1}', 'inference')
