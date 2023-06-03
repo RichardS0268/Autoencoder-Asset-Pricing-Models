@@ -143,8 +143,8 @@ def main():
     R2 = pd.DataFrame()
     for l in range(3):
         for k in range(6):
-            R2[f'CA{l}_k{k+1}'] = calculate_R2(f'CA{l}_k{k+1}', 'inference')
-            alpha_plot(f'CA{l}_k{k+1}', 'inference')
+            R2[f'CA{l}_{k+1}'] = calculate_R2(f'CA{l}_{k+1}', 'inference')
+            alpha_plot(f'CA{l}_{k+1}', 'inference')
 
     R2.to_csv('results/R2.csv')
 
