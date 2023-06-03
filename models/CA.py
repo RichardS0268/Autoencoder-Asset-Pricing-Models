@@ -35,10 +35,16 @@ class CA_base(nn.Module, modelBase):
 
     def _get_item(self, month):
         if not self.portfolio:
+            if month not in self.datashare_chara['DATE'].values:
+                # find the closest month in datashare_chara to month
+                month = self.datashare_chara['DATE'].values[np.argmin(np.abs(self.datashare_chara['DATE'].values - month))]
             beta_nn_input = self.datashare_chara.loc[self.datashare_chara['DATE'] == month].set_index('permno')[charas]
             labels = self.mon_ret.loc[self.mon_ret['date'] == month].drop_duplicates('permno').set_index('permno')['ret-rf']
             align_df = pd.concat([beta_nn_input, labels], axis=1).dropna()
         else: 
+            if month not in self.p_charas['DATE'].values:
+                # find the closest month in p_charas to month
+                month = self.p_charas['DATE'].values[np.argmin(np.abs(self.p_charas['DATE'].values - month))]
             beta_nn_input = self.p_charas.loc[self.p_charas['DATE'] == month][charas] # (94, 94)
             labels = self.portfolio_ret.loc[self.portfolio_ret['DATE'] == month][charas].T.values # (94, 1)
             beta_nn_input['ret-rf'] = labels
@@ -146,7 +152,7 @@ class CA_base(nn.Module, modelBase):
             else:
                 no_update_steps += 1
             
-            if no_update_steps > 15: # early stop
+            if no_update_steps > 20: # early stop
                 print(f'Early stop at epoch {i}')
                 break
         return train_loss, valid_loss
@@ -190,7 +196,6 @@ class CA_base(nn.Module, modelBase):
         prev_month = datetime.datetime(prev_month.year, prev_month.month, calendar.monthrange(prev_month.year, prev_month.month)[1]).strftime('%Y%m%d')
         prev_month = int(prev_month)
         
-        print(prev_month)
         _, _, factor_nn_input, _ = self._get_item(prev_month)
 
         factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)

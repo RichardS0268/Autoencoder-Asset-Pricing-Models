@@ -124,6 +124,8 @@ def git_push(message):
 
 def main():
     # CA3
+    # CA3(1).to('cuda').debug(19870529)
+    # exit(0)
     for k in range(6):
         gc.collect()
         model_inference_and_predict_CA(CA3(k+1).to('cuda'))
