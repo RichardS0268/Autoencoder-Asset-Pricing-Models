@@ -204,7 +204,7 @@ class CA0(CA_base):
 
 
 class CA1(CA_base):
-    def __init__(self, hidden_size, dropout, lr, device='cuda'):
+    def __init__(self, hidden_size, dropout=0.5, lr=0.001, device='cuda'):
         CA_base.__init__(self, f'CA1_{hidden_size}', device=device)
         self.dropout = dropout
         # P -> hidden_size
