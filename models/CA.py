@@ -5,6 +5,7 @@ import numpy as np
 from .modelBase import modelBase
 from utils import charas
 import datetime
+import calendar
 from dateutil.relativedelta import relativedelta
 
 MAX_EPOCH = 200
@@ -26,6 +27,11 @@ class CA_base(nn.Module, modelBase):
         self.p_charas = pd.read_pickle('./data/p_charas.pkl').astype(np.float64).reset_index()
         self.portfolio_ret=  pd.read_pickle('./data/portfolio_ret.pkl').astype(np.float64)
         self.mon_ret = pd.read_pickle('./data/month_ret.pkl').astype(np.float64)
+    
+    def debug(self, month):
+        beta_nn_input = self.p_charas.loc[self.p_charas['DATE'] == month][charas]
+        # beta_nn_input = self.datashare_chara.loc[self.datashare_chara['DATE'] == month].set_index('permno')[charas]
+        print(beta_nn_input)
 
     def _get_item(self, month):
         if not self.portfolio:
@@ -179,9 +185,12 @@ class CA_base(nn.Module, modelBase):
         return self.factor_nn(factor_nn_input).T
     
     def cal_delayed_Factor(self, month):
-        # calculate the last day of previous month
+        # calculate the last day of the previous month
         prev_month = datetime.datetime.strptime(str(month), '%Y%m%d') - relativedelta(months=1)
-        prev_month = int(prev_month.strftime('%Y%m%d'))
+        prev_month = datetime.datetime(prev_month.year, prev_month.month, calendar.monthrange(prev_month.year, prev_month.month)[1]).strftime('%Y%m%d')
+        prev_month = int(prev_month)
+        
+        print(prev_month)
         _, _, factor_nn_input, _ = self._get_item(prev_month)
 
         factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
