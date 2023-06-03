@@ -7,6 +7,7 @@ from tqdm import tqdm
 from utils import charas
 import matplotlib.pyplot as plt
 import gc
+import os
 
 from models.CA import CA0, CA1, CA2
 
@@ -116,6 +117,11 @@ def alpha_plot(model, type, portfolio = True):
     plt.title(model)
     plt.savefig(f'results/{type}/{model}_{type}_alpha_plot.png')
 
+def git_push(message):
+    os.system('git add results')
+    os.system(f'git commit -m "{message}"')
+    os.system('git push')
+
 def main():
     # CA0
     CA0_list = []
@@ -124,6 +130,8 @@ def main():
         CA0_list.append(CA0(k+1).to('cuda'))
         model_inference_and_predict_CA(CA0_list[k])
 
+    git_push("update: CA0 results")
+
     # CA1
     CA1_list = []
     for k in range(6):
@@ -131,12 +139,16 @@ def main():
         CA1_list.append(CA1(k+1).to('cuda'))
         model_inference_and_predict_CA(CA1_list[k])
 
+    git_push("update: CA1 results")
+
     # CA2
     CA2_list = []
     for k in range(6):
         gc.collect()
         CA2_list.append(CA2(k+1).to('cuda'))
         model_inference_and_predict_CA(CA2_list[k])
+
+    git_push("update: CA2 results")
 
     # calc R2
     # R2 is a dataframe with index = layer
@@ -147,6 +159,7 @@ def main():
             alpha_plot(f'CA{l}_{k+1}', 'inference')
 
     R2.to_csv('results/R2.csv')
+    git_push("update: analysis results")
 
 if __name__ == '__main__':
     main()
