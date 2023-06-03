@@ -2,11 +2,13 @@ import sys
 sys.path.append('../')
 
 from ipca import InstrumentedPCA
+import datetime
+from dateutil.relativedelta import relativedelta
 
 import pandas as pd
 import numpy as np
 
-from utils import charas
+from utils import charas, HiddenPrints
 from .modelBase import modelBase
 
 
@@ -18,6 +20,7 @@ class IPCA(modelBase):
         self.portfolio = portfolio
         self.__prepare_data()
 
+
     def __prepare_data(self):
         self.p_charas = pd.read_pickle('data/p_charas.pkl')
         portfolio_ret=  pd.read_pickle('data/portfolio_ret.pkl')
@@ -25,23 +28,25 @@ class IPCA(modelBase):
         self.train_p_charas = self.p_charas.loc[self.p_charas.DATE <= self.test_period[1]].copy(deep=False).reset_index().set_index(['index', 'DATE']).sort_index()
         for chr in charas:
             self.train_p_charas.loc[f'p_{chr}', 'p_ret'] = portfolio_ret.loc[portfolio_ret.DATE <= self.test_period[1]][chr].values
-
+        
         
     def train_model(self):
-        y = self.train_p_charas['p_ret']
-        X = self.train_p_charas.drop('p_ret', axis=1)
+        with HiddenPrints():
+            y = self.train_p_charas['p_ret']
+            X = self.train_p_charas.drop('p_ret', axis=1)
 
-        regr = InstrumentedPCA(n_factors=1, intercept=False)
-        regr = regr.fit(X=X, y=y)
-        self.Gamma, self.Factors = regr.get_factors(label_ind=True)
+            self.regr = InstrumentedPCA(n_factors=self.K, intercept=False)
+            self.regr = self.regr.fit(X=X, y=y)
+            self.Gamma, self.Factors = self.regr.get_factors(label_ind=False)
         
     
-    def calBeta(self, month):
-        return self.p_charas.loc[self.p_charas.DATE == month][charas].values @ self.Gamma.values # (N * P) @ (P * K) -> (N, K)
+    def inference(self, month):
+        X_pred = self.p_charas.drop('p_ret', axis=1).loc[self.p_charas.DATE == month].copy(deep=False).reset_index().set_index(['index', 'DATE']).sort_index()
+        return self.regr.predict(X_pred, mean_factor=True) # (N, 1)
     
-    def calFactor(self, month):
-        return self.Factors.values[:, -1] # K * 1
-
-    def cal_delayed_Factor(self, month):
-        return np.mean(self.Factors.values[:, :-1], axis=1)
+    def predict(self, month):
+        lag_X = self.p_charas.drop('p_ret', axis=1).loc[self.p_charas.DATE < month].copy(deep=False).reset_index().groupby('index').mean()
+        lag_X.DATE = self.p_charas.loc[self.p_charas.DATE < month].DATE.drop_duplicates()[-1]
+        lag_X = lag_X.reset_index().set_index(['index', 'DATE']).sort_index()
+        return self.regr.predict(lag_X, mean_factor=True) # (N, 1)
     

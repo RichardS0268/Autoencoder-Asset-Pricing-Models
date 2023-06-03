@@ -20,10 +20,12 @@ if 'data' not in os.listdir():
     os.system('wget https://cloud.tsinghua.edu.cn/f/179082ecf0f147a4840c/?dl=1 -O portfolio_ret.pkl')
     os.system('wget https://cloud.tsinghua.edu.cn/f/b93c6ae7e2014d3a951e/?dl=1 -O ff5.csv')
     os.system('wget https://cloud.tsinghua.edu.cn/f/5f077be9eda0428ab7e5/?dl=1 -O UMD.csv')
+    os.system('wget https://cloud.tsinghua.edu.cn/f/a916da12d5a9450eb0df/?dl=1 -O p_charas.pkl')
     
     os.system('mv portfolio_ret.pkl data')
     os.system('mv ff5.csv data')
     os.system('mv UMD.csv data')
+    os.system('mv p_charas.pkl data')
     
     
 with zipfile.ZipFile('data.zip', 'r') as z:    
@@ -98,11 +100,12 @@ if __name__ == '__main__':
     # portfolio_rets[charas] = portfolio_rets[charas].astype(np.float16)
     
     
-    mon_list = pd.read_pickle('data/mon_list.pkl')
-    _portfolio_chara_set = Parallel(n_jobs=-1)(delayed(cal_portfolio_charas)(mon, df=processed_df) for mon in tqdm(mon_list, colour='yellow', desc='Calculating P characteristics'))
-    p_charas = _portfolio_chara_set[0].copy(deep=False)
-    for tdf in _portfolio_chara_set[1:]:
-        p_charas = pd.concat([p_charas, tdf])
+    ##TODO: calculate portfolio characteristics (or download preprocessed data)
+    # mon_list = pd.read_pickle('data/mon_list.pkl')
+    # _portfolio_chara_set = Parallel(n_jobs=-1)(delayed(cal_portfolio_charas)(mon, df=processed_df) for mon in tqdm(mon_list, colour='yellow', desc='Calculating P characteristics'))
+    # p_charas = _portfolio_chara_set[0].copy(deep=False)
+    # for tdf in _portfolio_chara_set[1:]:
+    #     p_charas = pd.concat([p_charas, tdf])
     
     
     mon_list = []
@@ -120,5 +123,5 @@ if __name__ == '__main__':
     
     processed_df.to_pickle('data/datashare_re.pkl')
     # portfolio_rets.to_pickle('data/portfolio_rets.pkl')
-    p_charas.to_pickle('data/p_charas.pkl')
+    # p_charas.to_pickle('data/p_charas.pkl')
     R_matrix.to_pickle('data/stock_R_matrix.pkl')
