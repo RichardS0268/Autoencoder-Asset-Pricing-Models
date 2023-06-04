@@ -26,7 +26,11 @@ def model_inference_and_predict_CA(model):
     for g in T_bar: # rolling train
         # release GPU memory
         torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
         T_bar.set_postfix({'Year': g[0]})
+
+        model.reset_weight()
         train_loss, val_loss = model.train_model()
         # plot loss
         plt.plot(train_loss, label='train_loss')

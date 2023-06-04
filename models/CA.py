@@ -205,6 +205,13 @@ class CA_base(nn.Module, modelBase):
         factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
         return self.factor_nn(factor_nn_input).T
     
+    def reset_weight(self):
+        def init_weight(m):
+            if isinstance(m, nn.Linear):
+                nn.init.xavier_uniform_(m.weight)
+                nn.init.zeros_(m.bias)
+        self.apply(init_weight)
+
 class CA0(CA_base):
     def __init__(self, hidden_size, lr=0.001, device='cuda'):
         CA_base.__init__(self, f'CA0_{hidden_size}', device=device)
