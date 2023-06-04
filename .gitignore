@@ -5,3 +5,5 @@ __MACOSX/
 new_data.zip
 __pycache__
 models/__pycache__
+saved_models
+*_loss_*.png

@@ -1,5 +1,6 @@
 from models.PCA import PCA
 from models.FF import FF
+import torch
 
 import pandas as pd
 import numpy as np
@@ -23,8 +24,16 @@ def model_inference_and_predict_CA(model):
     
     stock_index = pd.Series(dtype=np.int64)
     for g in T_bar: # rolling train
+        # release GPU memory
+        torch.cuda.empty_cache()
         T_bar.set_postfix({'Year': g[0]})
-        model.train_model()
+        train_loss, val_loss = model.train_model()
+        # plot loss
+        plt.plot(train_loss, label='train_loss')
+        plt.plot(val_loss, label='val_loss')
+        plt.legend()
+        plt.savefig(f'results/no_dropout/train_loss/{model.name}_loss_{g[0]}.png')
+
         
         for m in g[1].to_list():
             m_stock_index, _, _, _ = model._get_item(m)
@@ -52,10 +61,10 @@ def model_inference_and_predict_CA(model):
         model.refit()
 
     inference_result = pd.DataFrame(inference_result.values.T, index=test_mons, columns=charas)
-    inference_result.to_csv(f'results/inference/{model.name}_inference.csv')
+    inference_result.to_csv(f'results/no_dropout/inference/{model.name}_inference.csv')
     
     predict_result = pd.DataFrame(predict_result.values.T, index=test_mons, columns=charas)
-    predict_result.to_csv(f'results/predict/{model.name}_predict.csv')
+    predict_result.to_csv(f'results/no_dropout/predict/{model.name}_predict.csv')
     return inference_result, predict_result
 
 OOS_start = 19870101
@@ -68,7 +77,7 @@ def calculate_R2(model, type, portfolio = True):
         raise Exception('Unrealized Function')
     oos_ret = portfolio_ret.loc[(portfolio_ret['DATE'] >= OOS_start) & (portfolio_ret['DATE'] <= OOS_end)]
     
-    output_path = f'results/{type}/{model}_{type}.csv'
+    output_path = f'results/no_dropout/{type}/{model}_{type}.csv'
     model_output = pd.read_csv(output_path)
     
     residual_square = (oos_ret.set_index('DATE') - model_output.set_index('DATE'))**2
@@ -86,7 +95,7 @@ def alpha_plot(model, type, portfolio = True):
     portfolio_ret = pd.read_pickle('data/portfolio_ret.pkl')
     oos_result = portfolio_ret.loc[(portfolio_ret['DATE'] >= OOS_start) & (portfolio_ret['DATE'] <= OOS_end)].set_index('DATE')
     
-    output_path = f'results/{type}/{model}_{type}.csv'
+    output_path = f'results/no_dropout/{type}/{model}_{type}.csv'
     inference_result = pd.read_csv(output_path)
     inference_result = inference_result.set_index('DATE')
     
@@ -115,11 +124,11 @@ def alpha_plot(model, type, portfolio = True):
     plt.legend()
 
     plt.title(model)
-    plt.savefig(f'results/{type}/{model}_{type}_alpha_plot.png')
+    plt.savefig(f'results/no_dropout/{type}/{model}_{type}_alpha_plot.png')
 
 def git_push(message):
     os.system('git add results')
-    os.system(f'git commit -m "{message}"')
+    os.system(f'git commit -m "no_dropout: {message}"')
     os.system('git push')
 
 def main():
@@ -128,26 +137,26 @@ def main():
     # exit(0)
     for k in range(6):
         gc.collect()
-        model_inference_and_predict_CA(CA3(k+1).to('cuda'))
+        model_inference_and_predict_CA(CA3(k+1, 0, 0.0005).to('cuda'))
     # CA0
     for k in range(6):
         gc.collect()
         
-        model_inference_and_predict_CA(CA0(k+1).to('cuda'))
+        model_inference_and_predict_CA(CA0(k+1, 0, 0.0005).to('cuda'))
 
     git_push("update: CA0 results")
 
     # CA1
     for k in range(6):
         gc.collect()
-        model_inference_and_predict_CA(CA1(k+1).to('cuda'))
+        model_inference_and_predict_CA(CA1(k+1, 0, 0.0005).to('cuda'))
 
     git_push("update: CA1 results")
 
     # CA2
     for k in range(6):
         gc.collect()
-        model_inference_and_predict_CA(CA2(k+1).to('cuda'))
+        model_inference_and_predict_CA(CA2(k+1, 0, 0.0005).to('cuda'))
 
     git_push("update: CA2 results")
 
@@ -158,8 +167,7 @@ def main():
         for k in range(6):
             R2[f'CA{l}_{k+1}'] = calculate_R2(f'CA{l}_{k+1}', 'inference')
             alpha_plot(f'CA{l}_{k+1}', 'inference')
-
-    R2.to_csv('results/R2.csv')
+    R2.to_csv('results/no_dropout/R2.csv')
     git_push("update: analysis results")
 
 if __name__ == '__main__':
