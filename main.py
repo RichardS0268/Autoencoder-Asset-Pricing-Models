@@ -33,6 +33,7 @@ def model_inference_and_predict_CA(model):
         plt.plot(val_loss, label='val_loss')
         plt.legend()
         plt.savefig(f'results/no_dropout/train_loss/{model.name}_loss_{g[0]}.png')
+        plt.close()
 
         
         for m in g[1].to_list():
@@ -125,6 +126,7 @@ def alpha_plot(model, type, portfolio = True):
 
     plt.title(model)
     plt.savefig(f'results/no_dropout/{type}/{model}_{type}_alpha_plot.png')
+    plt.close()
 
 def git_push(message):
     os.system('git add results')
