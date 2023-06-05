@@ -28,6 +28,9 @@ def model_inference_and_predict_CA(model):
         torch.cuda.empty_cache()
         torch.cuda.empty_cache()
         torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
         T_bar.set_postfix({'Year': g[0]})
 
         model.reset_weight()
