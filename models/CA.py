@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.utils.data import Dataset, DataLoader
 import pandas as pd
 import numpy as np
 from .modelBase import modelBase
@@ -71,8 +72,22 @@ class CA_base(nn.Module, modelBase):
             label_set.append(label)
             
         ##TODO: tensorize, shuffle (synchronously)
-        ## shuffle will be implemented inside of train_one_epoch
+        # shuffle
+        shuffled_ind = np.random.permutation(len(beta_nn_input_set))
+        beta_nn_input_set = [beta_nn_input_set[i] for i in shuffled_ind]
+        factor_nn_input_set = [factor_nn_input_set[i] for i in shuffled_ind]
+        label_set = [label_set[i] for i in shuffled_ind]
+
+        # convert to tensor
+        beta_nn_input_set = [torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device) for beta_nn_input in beta_nn_input_set]
+        factor_nn_input_set = [torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device) for factor_nn_input in factor_nn_input_set]
+        label_set = [torch.tensor(labels, dtype=torch.float32).to(self.device) for labels in label_set]
+
+        # nn.Dataloader
         return beta_nn_input_set, factor_nn_input_set, label_set
+
+
+
 
     def forward(self, char, pfret):
         processed_char = self.beta_nn(char)
@@ -84,16 +99,16 @@ class CA_base(nn.Module, modelBase):
     ##TODO: train_one_epoch
     def __train_one_epoch(self):
         beta_nn_input_set, factor_nn_input_set, label_set = self.train_dataset
-        shuffled_ind = np.random.permutation(len(beta_nn_input_set))
+        # shuffled_ind = np.random.permutation(len(beta_nn_input_set))
         epoch_loss = 0.0
-        for i, ind in enumerate(shuffled_ind):
-            beta_nn_input = beta_nn_input_set[ind]
-            factor_nn_input = factor_nn_input_set[ind]
-            labels = label_set[ind]
+        for i in range(len(beta_nn_input_set)):
+            beta_nn_input = beta_nn_input_set[i]
+            factor_nn_input = factor_nn_input_set[i]
+            labels = label_set[i]
             # convert to tensor
-            beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
-            factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
-            labels = torch.tensor(labels, dtype=torch.float32).to(self.device)
+            # beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
+            # factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
+            # labels = torch.tensor(labels, dtype=torch.float32).to(self.device)
 
             self.optimizer.zero_grad()
             output = self.forward(beta_nn_input, factor_nn_input)
@@ -106,6 +121,10 @@ class CA_base(nn.Module, modelBase):
             if i % 100 == 0:
                 # print(f'Batches: {i}, loss: {loss.item()}')
                 pass
+
+            # beta, factor, label = beta_nn_input.cuda(), factor_nn_input.cuda(), labels.cuda()
+            # del beta, factor, label
+            # torch.cuda.empty_cache()
         return epoch_loss / len(beta_nn_input_set)
 
     def __valid_one_epoch(self):
@@ -118,13 +137,17 @@ class CA_base(nn.Module, modelBase):
             labels = label_set[i]
 
             # convert to tensor
-            beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
-            factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
-            labels = torch.tensor(labels, dtype=torch.float32).T.to(self.device)
+            # beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
+            # factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
+            # labels = torch.tensor(labels, dtype=torch.float32).T.to(self.device)
 
             output = self.forward(beta_nn_input, factor_nn_input)
             loss = self.criterion(output, labels)
             epoch_loss += loss.item()
+
+            # beta, factor, label = beta_nn_input.cuda(), factor_nn_input.cuda(), labels.cuda()
+            # del beta, factor, label
+            # torch.cuda.empty_cache()
         return epoch_loss / len(beta_nn_input_set)
     
     def train_model(self):
@@ -144,7 +167,8 @@ class CA_base(nn.Module, modelBase):
             
             self.eval()
             ##TODO, valid and early stop
-            valid_error = self.__valid_one_epoch()
+            with torch.no_grad():
+                valid_error = self.__valid_one_epoch()
             valid_loss.append(valid_error)
             if valid_error < min_error:
                 min_error = valid_error

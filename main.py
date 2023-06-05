@@ -146,26 +146,26 @@ def main():
     # exit(0)
     for k in range(6):
         gc.collect()
-        model_inference_and_predict_CA(CA3(k+1, 0, 0.0005).to('cuda'))
+        model_inference_and_predict_CA(CA3(k+1, 0, 0.001).to('cuda'))
     # CA0
     for k in range(6):
         gc.collect()
         
-        model_inference_and_predict_CA(CA0(k+1, 0, 0.0005).to('cuda'))
+        model_inference_and_predict_CA(CA0(k+1, 0, 0.001).to('cuda'))
 
     git_push("update: CA0 results")
 
     # CA1
     for k in range(6):
         gc.collect()
-        model_inference_and_predict_CA(CA1(k+1, 0, 0.0005).to('cuda'))
+        model_inference_and_predict_CA(CA1(k+1, 0, 0.001).to('cuda'))
 
     git_push("update: CA1 results")
 
     # CA2
     for k in range(6):
         gc.collect()
-        model_inference_and_predict_CA(CA2(k+1, 0, 0.0005).to('cuda'))
+        model_inference_and_predict_CA(CA2(k+1, 0, 0.001).to('cuda'))
 
     git_push("update: CA2 results")
 
