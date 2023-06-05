@@ -24,16 +24,18 @@ def model_inference_and_predict_CA(model):
     
     stock_index = pd.Series(dtype=np.int64)
     for g in T_bar: # rolling train
-        # release GPU memory
-        torch.cuda.empty_cache()
-        torch.cuda.empty_cache()
-        torch.cuda.empty_cache()
-        torch.cuda.empty_cache()
-        torch.cuda.empty_cache()
-        torch.cuda.empty_cache()
         T_bar.set_postfix({'Year': g[0]})
 
         model.reset_weight()
+        model.release_gpu()
+         # release GPU memory
+        torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
+
         train_loss, val_loss = model.train_model()
         # plot loss
         plt.plot(train_loss, label='train_loss')
@@ -73,6 +75,10 @@ def model_inference_and_predict_CA(model):
     
     predict_result = pd.DataFrame(predict_result.values.T, index=test_mons, columns=charas)
     predict_result.to_csv(f'results/no_dropout/predict/{model.name}_predict.csv')
+
+    # GC: release RAM memory(model)
+    del model
+    gc.collect()
     return inference_result, predict_result
 
 OOS_start = 19870101

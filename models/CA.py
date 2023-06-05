@@ -10,7 +10,6 @@ import calendar
 from dateutil.relativedelta import relativedelta
 
 MAX_EPOCH = 200
-LEARNING_RATE = 1e-3
 
 class CA_base(nn.Module, modelBase):
     def __init__(self, name, device='cuda', portfolio=True):
@@ -28,6 +27,10 @@ class CA_base(nn.Module, modelBase):
         self.p_charas = pd.read_pickle('./data/p_charas.pkl').astype(np.float64).reset_index()
         self.portfolio_ret=  pd.read_pickle('./data/portfolio_ret.pkl').astype(np.float64)
         self.mon_ret = pd.read_pickle('./data/month_ret.pkl').astype(np.float64)
+
+        self.train_dataloader = None
+        self.valid_dataloader = None
+        self.test_dataloader = None
     
     def debug(self, month):
         beta_nn_input = self.p_charas.loc[self.p_charas['DATE'] == month][charas]
@@ -215,6 +218,15 @@ class CA_base(nn.Module, modelBase):
                 nn.init.xavier_uniform_(m.weight)
                 nn.init.zeros_(m.bias)
         self.apply(init_weight)
+
+    def release_gpu(self):
+        if self.train_dataloader is not None:
+            del self.train_dataloader
+        if self.valid_dataloader is not None:
+            del self.valid_dataloader
+        if self.test_dataloader is not None:
+            del self.test_dataloader
+        torch.cuda.empty_cache()
 
 class CA0(CA_base):
     def __init__(self, hidden_size, lr=0.001, device='cuda'):
