@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, TensorDataset
 import pandas as pd
 import numpy as np
 from .modelBase import modelBase
@@ -71,20 +71,12 @@ class CA_base(nn.Module, modelBase):
             factor_nn_input_set.append(_factor_input)
             label_set.append(label)
             
-        ##TODO: tensorize, shuffle (synchronously)
-        # shuffle
-        shuffled_ind = np.random.permutation(len(beta_nn_input_set))
-        beta_nn_input_set = [beta_nn_input_set[i] for i in shuffled_ind]
-        factor_nn_input_set = [factor_nn_input_set[i] for i in shuffled_ind]
-        label_set = [label_set[i] for i in shuffled_ind]
+        beta_nn_input_set = torch.tensor(beta_nn_input_set, dtype=torch.float32).to(self.device)
+        factor_nn_input_set = torch.tensor(factor_nn_input_set, dtype=torch.float32).to(self.device)
+        label_set = torch.tensor(label_set, dtype=torch.float32).to(self.device)
 
-        # convert to tensor
-        beta_nn_input_set = [torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device) for beta_nn_input in beta_nn_input_set]
-        factor_nn_input_set = [torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device) for factor_nn_input in factor_nn_input_set]
-        label_set = [torch.tensor(labels, dtype=torch.float32).to(self.device) for labels in label_set]
-
-        # nn.Dataloader
-        return beta_nn_input_set, factor_nn_input_set, label_set
+        dataset = TensorDataset(beta_nn_input_set, factor_nn_input_set, label_set)   
+        return DataLoader(dataset, batch_size=1, shuffle=True)
 
 
 
@@ -92,25 +84,20 @@ class CA_base(nn.Module, modelBase):
     def forward(self, char, pfret):
         processed_char = self.beta_nn(char)
         processed_pfret = self.factor_nn(pfret)
-        # dot product of two processed tensors
         return torch.sum(processed_char * processed_pfret, dim=1)
 
     
     ##TODO: train_one_epoch
     def __train_one_epoch(self):
-        beta_nn_input_set, factor_nn_input_set, label_set = self.train_dataset
-        # shuffled_ind = np.random.permutation(len(beta_nn_input_set))
         epoch_loss = 0.0
-        for i in range(len(beta_nn_input_set)):
-            beta_nn_input = beta_nn_input_set[i]
-            factor_nn_input = factor_nn_input_set[i]
-            labels = label_set[i]
-            # convert to tensor
-            # beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
-            # factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
-            # labels = torch.tensor(labels, dtype=torch.float32).to(self.device)
-
+        for i, (beta_nn_input, factor_nn_input, labels)  in enumerate(self.train_dataloader):
             self.optimizer.zero_grad()
+            # beta_nn_input reshape: (1, 94, N) -> (N, 94)
+            # factor_nn_input reshape: (1, 94, 1) -> (1, 94)
+            # labels reshape: (1, N) -> (N, )
+            beta_nn_input = beta_nn_input.squeeze(0).T
+            factor_nn_input = factor_nn_input.squeeze(0).T
+            labels = labels.squeeze(0)
             output = self.forward(beta_nn_input, factor_nn_input)
             loss = self.criterion(output, labels)
             
@@ -122,38 +109,28 @@ class CA_base(nn.Module, modelBase):
                 # print(f'Batches: {i}, loss: {loss.item()}')
                 pass
 
-            # beta, factor, label = beta_nn_input.cuda(), factor_nn_input.cuda(), labels.cuda()
-            # del beta, factor, label
-            # torch.cuda.empty_cache()
-        return epoch_loss / len(beta_nn_input_set)
+        return epoch_loss / len(self.train_dataloader)
 
     def __valid_one_epoch(self):
-        # run validation, no gradient calculation
-        beta_nn_input_set, factor_nn_input_set, label_set = self.valid_dataset
         epoch_loss = 0.0
-        for i in range(len(beta_nn_input_set)):
-            beta_nn_input = beta_nn_input_set[i]
-            factor_nn_input = factor_nn_input_set[i]
-            labels = label_set[i]
-
-            # convert to tensor
-            # beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
-            # factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
-            # labels = torch.tensor(labels, dtype=torch.float32).T.to(self.device)
+        for i, (beta_nn_input, factor_nn_input, labels) in enumerate(self.valid_dataloader):
+            # beta_nn_input reshape: (1, 94, N) -> (N, 94)
+            # factor_nn_input reshape: (1, 94, 1) -> (1, 94)
+            # labels reshape: (1, N) -> (N, )
+            beta_nn_input = beta_nn_input.squeeze(0).T
+            factor_nn_input = factor_nn_input.squeeze(0).T
+            labels = labels.squeeze(0)
 
             output = self.forward(beta_nn_input, factor_nn_input)
             loss = self.criterion(output, labels)
             epoch_loss += loss.item()
 
-            # beta, factor, label = beta_nn_input.cuda(), factor_nn_input.cuda(), labels.cuda()
-            # del beta, factor, label
-            # torch.cuda.empty_cache()
-        return epoch_loss / len(beta_nn_input_set)
+        return epoch_loss / len(self.valid_dataloader)
     
     def train_model(self):
-        self.train_dataset = self.dataloader(self.train_period)
-        self.valid_dataset = self.dataloader(self.valid_period)
-        self.test_dataset = self.dataloader(self.test_period)
+        self.train_dataloader = self.dataloader(self.train_period)
+        self.valid_dataloader = self.dataloader(self.valid_period)
+        self.test_dataloader = self.dataloader(self.test_period)
         
         min_error = np.Inf
         no_update_steps = 0
@@ -186,18 +163,21 @@ class CA_base(nn.Module, modelBase):
         return train_loss, valid_loss
     
     def test_model(self):
-        beta, factor, label = self.test_dataset
-        i = np.random.randint(len(beta))
-        beta_nn_input = beta[i]
-        factor_nn_input = factor[i]
-        labels = label[i]
+        # beta, factor, label = self.test_dataset
+        # i = np.random.randint(len(beta))
+        # beta_nn_input = beta[i]
+        # factor_nn_input = factor[i]
+        # labels = label[i]
+        output = None
+        label = None
+        for i, beta_nn_input, factor_nn_input, labels in enumerate(self.test_dataloader):
+            # convert to tensor
+            # beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
+            # factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
+            # labels = torch.tensor(labels, dtype=torch.float32).T.to(self.device)
+            output = self.forward(beta_nn_input, factor_nn_input)
+            break
 
-        # convert to tensor
-        beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
-        factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
-        labels = torch.tensor(labels, dtype=torch.float32).T.to(self.device)
-
-        output = self.forward(beta_nn_input, factor_nn_input)
         loss = self.criterion(output, labels)
         print(f'Test loss: {loss.item()}')
         print(f'Predicted: {output}')
