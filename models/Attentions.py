@@ -42,9 +42,6 @@ class CrossAttention(nn.Module):
         # QK^TV : (batch_size, input_size, embedding_size)
         QKV = self.dropout(QKV)
         return QKV
-    
-import torch
-import torch.nn as nn
 
 class UniversalCrossAttention(nn.Module):
     def __init__(self, dim, heads=8):
