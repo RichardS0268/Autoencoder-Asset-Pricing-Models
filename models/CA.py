@@ -9,6 +9,8 @@ import datetime
 import calendar
 from dateutil.relativedelta import relativedelta
 
+from models.Attentions import *
+
 MAX_EPOCH = 200
 
 class CA_base(nn.Module, modelBase):
@@ -140,7 +142,7 @@ class CA_base(nn.Module, modelBase):
         valid_loss = []
         train_loss = []
         for i in range(MAX_EPOCH):
-            # print(f'Epoch {i}')
+            print(f'Epoch {i}')
             self.train()
             train_error = self.__train_one_epoch()
             train_loss.append(train_error)
@@ -323,3 +325,128 @@ class CA3(CA_base):
         
         self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
         self.criterion = nn.MSELoss().to(device)
+
+class CAA2(CA_base):
+    def __init__(self, hidden_size, dropout=0.5, lr=0.001, device="cuda"):
+        CA_base.__init__(self, f'CAA2_{hidden_size}', device=device)
+        self.dropout = dropout
+
+        self.beta_nn = nn.Sequential(
+            nn.Linear(94, 32),
+            nn.BatchNorm1d(32),
+            nn.ReLU(),
+            nn.Dropout(self.dropout),
+
+            nn.Linear(32, 16),
+            nn.BatchNorm1d(16),
+            nn.ReLU(),
+            nn.Dropout(self.dropout),
+
+            nn.Linear(16, 8),
+            nn.BatchNorm1d(8),
+            nn.ReLU(),
+            nn.Dropout(self.dropout),
+
+            nn.Linear(8, hidden_size)
+        )
+        self.beta_attention = CrossAttention(hidden_size, hidden_size, self.dropout)
+        self.factor_attention = CrossAttention(hidden_size, hidden_size, self.dropout)
+        self.factor_nn = nn.Sequential(
+            nn.Linear(94, hidden_size)
+        )
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        self.criterion = nn.MSELoss().to(device)
+    
+    def forward(self, char, pfret, query):
+        beta = self.beta_nn(char) # (N, hidden_size)
+        factor = self.factor_nn(pfret) # (1, hidden_size)
+        # get dot product 
+        # query = torch.matmul(beta, factor.T) # (N, 1)
+        # get attention
+        # print(beta.shape, factor.shape, query.shape)
+        # by now beta is (N, hidden_size), factor is (1, hidden_size), query is (N, 1)
+        # convert beta to (N, hidden_size, 1), factor to (1, hidden_size, 1)
+        query = query.unsqueeze(-1)
+        beta = beta.unsqueeze(-1)
+        factor = factor.unsqueeze(-1)
+        beta_a = self.beta_attention(query, beta) # (N, hidden_size)
+        factor_a = self.factor_attention(query, factor) # (1, hidden_size)
+
+        # print(beta_a.shape, factor_a.shape)
+
+        return torch.sum(beta_a * factor_a, dim=1)  # (N, 1) -> (N, )
+
+    def __train_one_epoch(self):
+        epoch_loss = 0.0
+        for i, (beta_nn_input, factor_nn_input, labels)  in enumerate(self.train_dataloader):
+            self.optimizer.zero_grad()
+            # beta_nn_input reshape: (1, 94, N) -> (N, 94)
+            # factor_nn_input reshape: (1, 94, 1) -> (1, 94)
+            # labels reshape: (1, N) -> (N, )
+            beta_nn_input = beta_nn_input.squeeze(0).T
+            factor_nn_input = factor_nn_input.squeeze(0).T
+            labels = labels.squeeze(0)
+            output = self.forward(beta_nn_input, factor_nn_input, labels.unsqueeze(-1))
+            # print(output.shape, labels.shape)
+            loss = self.criterion(output, labels)
+            
+            loss.backward()
+            self.optimizer.step()
+            epoch_loss += loss.item()
+
+            if i % 100 == 0:
+                # print(f'Batches: {i}, loss: {loss.item()}')
+                pass
+
+        return epoch_loss / len(self.train_dataloader)
+
+    def train_model(self):
+        self.train_dataloader = self.dataloader(self.train_period)
+        self.valid_dataloader = self.dataloader(self.valid_period)
+        self.test_dataloader = self.dataloader(self.test_period)
+        
+        min_error = np.Inf
+        no_update_steps = 0
+        valid_loss = []
+        train_loss = []
+        for i in range(MAX_EPOCH):
+            # print(f'Epoch {i}')
+            self.train()
+            train_error = self.__train_one_epoch()
+            train_loss.append(train_error)
+            
+            self.eval()
+            ##TODO, valid and early stop
+            with torch.no_grad():
+                valid_error = self.__valid_one_epoch()
+            valid_loss.append(valid_error)
+            if valid_error < min_error:
+                min_error = valid_error
+                no_update_steps = 0
+                # save model
+                torch.save(self.state_dict(), f'./saved_models/{self.name}.pt')
+            else:
+                no_update_steps += 1
+            
+            if no_update_steps > 20: # early stop
+                print(f'Early stop at epoch {i}')
+                break
+            # load from saved model
+            self.load_state_dict(torch.load(f'./saved_models/{self.name}.pt'))
+        return train_loss, valid_loss
+    
+    def __valid_one_epoch(self):
+        epoch_loss = 0.0
+        for i, (beta_nn_input, factor_nn_input, labels) in enumerate(self.valid_dataloader):
+            # beta_nn_input reshape: (1, 94, N) -> (N, 94)
+            # factor_nn_input reshape: (1, 94, 1) -> (1, 94)
+            # labels reshape: (1, N) -> (N, )
+            beta_nn_input = beta_nn_input.squeeze(0).T
+            factor_nn_input = factor_nn_input.squeeze(0).T
+            labels = labels.squeeze(0)
+
+            output = self.forward(beta_nn_input, factor_nn_input, labels.unsqueeze(-1))
+            loss = self.criterion(output, labels)
+            epoch_loss += loss.item()
+
+        return epoch_loss / len(self.valid_dataloader)

@@ -25,23 +25,33 @@ class CrossAttention(nn.Module):
         # Value : (batch_size, input_size, 1) -> (batch_size, input_size, embedding_size)
         self.value = nn.Linear(1, embedding_size)
 
-    def forward(self, x1, x2):
-        Q = self.query(x1)
-        K = self.key(x2)
-        V = self.value(x2)
+    def forward(self, q, x):
+        # print('q: ', q.shape)
+        # print('x: ', x.shape)
+        Q = self.query(q)
+        # print('Q: ', Q.shape)
+        K = self.key(x)
+        # print('K: ', K.shape)
+        V = self.value(x)
+        # print('V: ', V.shape)
+
 
         # Q : (batch_size, input_size, embedding_size)
         # K : (batch_size, input_size, embedding_size)
         # V : (batch_size, input_size, embedding_size)
         # QK^T : (batch_size, input_size, input_size)
+        # print("DEBUG:", Q.shape, K.transpose(1,2).shape)
         QK = torch.matmul(Q, K.transpose(1, 2))
+        # print("matmul(Q, K.T): ", QK.shape)
         # softmax(QK^T) : (batch_size, input_size, input_size)
         QK = self.softmax(QK)
+        # print("softmax: ", QK.shape)
         # QK^TV : (batch_size, input_size, embedding_size)
         QKV = torch.matmul(QK, V)
+        # print("matmul(QK, V): ", QKV.shape)
         # QK^TV : (batch_size, input_size, embedding_size)
         QKV = self.dropout(QKV)
-        return QKV
+        return QKV.squeeze(1)
 
 class UniversalCrossAttention(nn.Module):
     def __init__(self, dim, heads=8):
