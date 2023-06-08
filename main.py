@@ -199,6 +199,8 @@ if __name__ == "__main__":
         if len(model['omit_char']):
             alpha_plot(model['model'], model['name'].split('_')[0][:-1], save_dir='alpha_imgs')
 
+        del model
+
     # save R_square to json
     p = time.localtime()
     time_str = f"{p.tm_year}-{p.tm_mon}-{p.tm_mday}-{p.tm_hour}-{p.tm_min}-{p.tm_sec}"
