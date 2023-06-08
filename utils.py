@@ -28,7 +28,7 @@ month_chara = {
     'std_dolvol': 87, 'std_turn': 88, 'turn': 93, 'zerotrade': 94
 }
 
-charas = list(annual_chara.keys()) + list(quarter_chara.keys()) + list(month_chara.keys())
+CHARAS_LIST = list(annual_chara.keys()) + list(quarter_chara.keys()) + list(month_chara.keys())
 
 import sys
 import os

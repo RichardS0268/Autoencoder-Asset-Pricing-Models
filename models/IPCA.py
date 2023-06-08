@@ -8,7 +8,7 @@ from dateutil.relativedelta import relativedelta
 import pandas as pd
 import numpy as np
 
-from utils import charas, HiddenPrints
+from utils import CHARAS_LIST, HiddenPrints
 from .modelBase import modelBase
 
 

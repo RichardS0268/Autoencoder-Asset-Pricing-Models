@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../')
 
-from utils import charas
+from utils import CHARAS_LIST
 from .modelBase import modelBase
 
 import pandas as pd

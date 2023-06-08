@@ -4,7 +4,7 @@ from torch.utils.data import Dataset, DataLoader, TensorDataset
 import pandas as pd
 import numpy as np
 from .modelBase import modelBase
-from utils import charas
+from utils import CHARAS_LIST
 import datetime
 import calendar
 from dateutil.relativedelta import relativedelta
