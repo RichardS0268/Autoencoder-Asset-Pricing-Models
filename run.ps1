@@ -15,6 +15,12 @@ $chars = $chars.Split(' ')
 # loop through the array of chars
 foreach ($char in $chars) {
     # run the python script
-    python main.py --Model 'CA0 CA1 CA2 CA3' --K '5' --omit_char $char
+    # python main.py --Model 'CA0 CA1 CA2 CA3' --K '5' --omit_char $char
+    Write-Host $char
+    
+    git add '.'
+    git commit -m "added results: " + $char
+    git push origin master
 }
+
 
