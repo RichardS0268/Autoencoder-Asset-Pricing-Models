@@ -11,8 +11,9 @@ def calculate_R2(model, type):
     portfolio_ret = pd.read_pickle('data/portfolio_ret.pkl')
 
     oos_ret = portfolio_ret.loc[(portfolio_ret['DATE'] >= OOS_start) & (portfolio_ret['DATE'] <= OOS_end)]
-    
-    output_path = f'results/{type}/{model}_{type}.csv'
+    print('type: ', type)
+    output_path = f'results/{type}/{model.name}_{type}.csv'
+    print('path : ', output_path)
     model_output = pd.read_csv(output_path)
     
     residual_square = (oos_ret.set_index('DATE') - model_output.set_index('DATE'))**2
@@ -29,7 +30,7 @@ def alpha_plot(model, type, save_dir='alpha_imgs'):
     portfolio_ret = pd.read_pickle('data/portfolio_ret.pkl')
     oos_result = portfolio_ret.loc[(portfolio_ret['DATE'] >= OOS_start) & (portfolio_ret['DATE'] <= OOS_end)].set_index('DATE')
     
-    output_path = f'results/{type}/{model}_{type}.csv'
+    output_path = f'results/{type}/{model.name}_{type}.csv'
     inference_result = pd.read_csv(output_path)
     inference_result = inference_result.set_index('DATE')
     
@@ -56,6 +57,6 @@ def alpha_plot(model, type, save_dir='alpha_imgs'):
     plt.xlabel('Raw Return')
     plt.legend()
 
-    plt.title(model)
+    plt.title(model.name)
     plt.savefig(f'{save_dir}/{type}/{model}_{type}_alpha_plot.png')
     plt.close()

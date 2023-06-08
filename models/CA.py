@@ -145,7 +145,7 @@ class CA_base(nn.Module, modelBase):
         valid_loss = []
         train_loss = []
         for i in range(MAX_EPOCH):
-            print(f'Epoch {i}')
+            # print(f'Epoch {i}')
             self.train()
             train_error = self.__train_one_epoch()
             train_loss.append(train_error)

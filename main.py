@@ -55,6 +55,7 @@ def model_inference_and_predict_CA(model):
     Inference and Prediction of NN models:
     Returns: model.name_inference.csv & model.name_inference.csv saved in path 'results'
     """
+    model = model.to('cuda')
     mon_list = pd.read_pickle('data/mon_list.pkl')
     test_mons = mon_list.loc[mon_list >= model.test_period[0]]
     inference_result = pd.DataFrame()
@@ -76,7 +77,7 @@ def model_inference_and_predict_CA(model):
         plt.plot(train_loss, label='train_loss')
         plt.plot(val_loss, label='val_loss')
         plt.legend()
-        plt.savefig(f'results/no_dropout/train_loss/{model.name}_loss_{g[0]}.png')
+        plt.savefig(f'results/train_loss/{model.name}_loss_{g[0]}.png')
         plt.close()
 
         for m in g[1].to_list():
@@ -104,10 +105,10 @@ def model_inference_and_predict_CA(model):
         model.refit()
 
     inference_result = pd.DataFrame(inference_result.values.T, index=test_mons, columns=CHARAS_LIST)
-    inference_result.to_csv(f'results/no_dropout/inference/{model.name}_inference.csv')
+    inference_result.to_csv(f'results/inference/{model.name}_inference.csv')
     
     predict_result = pd.DataFrame(predict_result.values.T, index=test_mons, columns=CHARAS_LIST)
-    predict_result.to_csv(f'results/no_dropout/predict/{model.name}_predict.csv')
+    predict_result.to_csv(f'results/predict/{model.name}_predict.csv')
 
     # GC: release RAM memory(model)
     del model
@@ -187,18 +188,21 @@ if __name__ == "__main__":
 
         if model['name'].split('_')[0][:-1] == 'CA':
             print('model_inference_and_predict_CA')
-            # model_inference_and_predict_CA(model['model'])    
+            model_inference_and_predict_CA(model['model'])    
         else:
             model_inference_and_predict(model['model'])
-        
+        print('name : ', model['name'])
         gc.collect()    
-        
-        R_square.append(calculate_R2(model['model'], model['name'].split('_')[0][:-1]))
+        # TODO: unknown typr for calculate R2
+        # R_square.append(calculate_R2(model['model'], model['name'].split('_')[0][:-1]))
+        R_square.append(calculate_R2(model['model'], 'inference'))
         if len(model['omit_char']):
             alpha_plot(model['model'], model['name'].split('_')[0][:-1], save_dir='alpha_imgs')
 
-
-    filename = f"R_squares/{time.ctime().split(' ')[-1] + '-' + time.ctime().split(' ')[1] + '-'+ time.ctime().split(' ')[3] + ' ' + time.ctime().split(' ')[4] }.json"
+    # save R_square to json
+    p = time.localtime()
+    time_str = f"{p.tm_year}-{p.tm_mon}-{p.tm_mday}-{p.tm_hour}-{p.tm_min}-{p.tm_sec}"
+    filename = f"R_squares/{time_str}.json"
     obj = {
         "models": [],
         'omit_char': [],
