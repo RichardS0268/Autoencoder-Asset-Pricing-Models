@@ -8,3 +8,4 @@ models/__pycache__
 saved_models
 *_loss_*.png
 *.ipynb
+results/

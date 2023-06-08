@@ -58,7 +58,7 @@ def pre_process(date):
         series = cross_slice[col]
         de_duplicate_slice = pd.DataFrame(series.drop_duplicates().to_list(), columns=['chara'])
         series = pd.DataFrame(series.to_list(), columns=['chara'])
-        
+        # sort and assign rank, the same value should have the same rank
         de_duplicate_slice['sort_rank'] = de_duplicate_slice['chara'].argsort().argsort()
         rank = pd.merge(series, de_duplicate_slice, left_on='chara', right_on='chara', how='right')['sort_rank']
         # if all values are zero, the results will contain nan

@@ -53,6 +53,7 @@ class CrossAttention(nn.Module):
         QKV = self.dropout(QKV)
         return QKV.squeeze(1)
 
+
 class UniversalCrossAttention(nn.Module):
     def __init__(self, dim, heads=8):
         super().__init__()

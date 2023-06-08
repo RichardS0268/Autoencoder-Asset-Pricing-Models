@@ -4,7 +4,7 @@ sys.path.append('../')
 import pandas as pd
 import numpy as np
 
-from utils import CHARAS_LIST
+from utils import *
 from .modelBase import modelBase
 
 
@@ -19,10 +19,10 @@ def portfolio_R_matrix(start_date, end_date):
 
 
 class PCA(modelBase):
-    def __init__(self, K, portfolio=True):
+    def __init__(self, K, omit_char=[]):
         super(PCA, self).__init__(f'PCA_{K}')
         self.K = K
-        self.portfolio = portfolio
+        self.omit_char = omit_char
         
         
     def __col_de_mean(self, matrix):
