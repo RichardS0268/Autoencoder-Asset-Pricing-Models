@@ -15,6 +15,7 @@ from utils import *
 from analysis import *
 import matplotlib.pyplot as plt
 from itertools import product
+import os
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -115,7 +116,10 @@ def model_inference_and_predict_CA(model):
     gc.collect()
     return inference_result, predict_result
 
-
+def git_push(msg):
+    os.system('git add R_squares')
+    os.system(f'git commit -m "{msg}"')
+    os.system('git push')
 
 def model_selection(model_type, model_K, omit_char=[]):
     assert model_type in ['FF', 'PCA', 'IPCA', 'CA0', 'CA1', 'CA2', 'CA3'], f'No Such Model: {model_type}'
@@ -169,7 +173,7 @@ def model_selection(model_type, model_K, omit_char=[]):
             'model': CA3(hidden_size=model_K, dropout=CA_DR, lr=CA_LR, omit_char=omit_char)
         } 
         
-        
+ 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -213,4 +217,9 @@ if __name__ == "__main__":
 
     with open(filename, "w") as out_file:
         json.dump(obj, out_file)
+
+    # git push
+    git_push(f"Run main.py")
+
+
     
