@@ -1,7 +1,7 @@
 import sys
 sys.path.append('../')
 
-from utils import charas
+from utils import CHARAS_LIST
 from .modelBase import modelBase
 
 import pandas as pd
@@ -10,10 +10,9 @@ from dateutil.relativedelta import relativedelta
 
 
 class FF(modelBase):
-    def __init__(self, K, portfolio=True):
+    def __init__(self, K):
         super(FF, self).__init__(f'FF_{K}')
         self.K = K
-        self.portfolio = portfolio
         self.train_period[0] = 19630731 # ff5 data from FF website is only available from 196307
         self.__prepare_FFf()
         
@@ -32,11 +31,11 @@ class FF(modelBase):
     def train_model(self):
         self.beta_matrix = []
         X = self.FFf[self.fname[:self.K]].loc[self.train_period[0]//100:self.train_period[1]//100]
-        for col in charas:
+        for col in CHARAS_LIST:
             y = self.portfolio_ret.set_index('DATE')[col].loc[self.train_period[0]//100:self.train_period[1]//100]
             model = sm.OLS(y.values, X.values).fit()
             self.beta_matrix.append(model.params)
-        self.beta_matrix = pd.DataFrame(self.beta_matrix, columns=self.fname[:self.K], index=charas)
+        self.beta_matrix = pd.DataFrame(self.beta_matrix, columns=self.fname[:self.K], index=CHARAS_LIST)
     
         
     def calBeta(self, month):

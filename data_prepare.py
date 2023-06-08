@@ -7,7 +7,7 @@ import os
 import zipfile
 from joblib import delayed, Parallel
 from itertools import product
-from utils import charas
+from utils import CHARAS_LIST
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -46,16 +46,30 @@ with zipfile.ZipFile('data.zip', 'r') as z:
 
 def pre_process(date):
     cross_slice = datashare.loc[datashare.DATE == date].copy(deep=False)
-    
     omitted_mask = 1.0 * np.isnan(cross_slice.loc[cross_slice['DATE'] == date])
     # fill nan values with each factors median
     cross_slice.loc[cross_slice.DATE == date] = cross_slice.fillna(0) + omitted_mask * cross_slice.median()
     # if all stocks' factor is nan, fill by zero
     cross_slice.loc[cross_slice.DATE == date] = cross_slice.fillna(0)
-    # rank-normalize all characteristics into the interval [-1, 1]
-    cross_slice.loc[cross_slice.DATE == date, charas] = (((cross_slice - cross_slice.min()) / (cross_slice.max() - cross_slice.min()))[charas].fillna(0.5) * 2 - 1).astype(np.float16)
+
+    re_df = []
+    # rank normalization
+    for col in CHARAS_LIST:
+        series = cross_slice[col]
+        de_duplicate_slice = pd.DataFrame(series.drop_duplicates().to_list(), columns=['chara'])
+        series = pd.DataFrame(series.to_list(), columns=['chara'])
+        # sort and assign rank, the same value should have the same rank
+        de_duplicate_slice['sort_rank'] = de_duplicate_slice['chara'].argsort().argsort()
+        rank = pd.merge(series, de_duplicate_slice, left_on='chara', right_on='chara', how='right')['sort_rank']
+        # if all values are zero, the results will contain nan
+        rank_normal = ((rank - rank.min())/(rank.max() - rank.min())*2 - 1)
+        re_df.append(rank_normal)
+    re_df = pd.DataFrame(re_df, index=CHARAS_LIST).T.fillna(0)
+    re_df['permno'] = list(cross_slice['permno'].astype(int))
+    re_df['DATE'] = list(cross_slice['DATE'].astype(int))
     
-    return cross_slice
+    return re_df[['permno', 'DATE'] + CHARAS_LIST]
+
 
 
 def cal_portfolio_ret(it, df):
@@ -73,17 +87,17 @@ def cal_portfolio_ret(it, df):
 
 def cal_portfolio_charas(month, df):
     mon_portfolio_chara = []
-    p_name = ['p_' + chr for chr in charas]
-    for chr in charas:
+    p_name = ['p_' + chr for chr in CHARAS_LIST]
+    for chr in CHARAS_LIST:
         long_portfolio = df.loc[df.DATE == month].sort_values(by=chr, ascending=False).reset_index(drop=True)[:df.loc[df.DATE == month].shape[0]//10]['permno'].to_list()
         short_portfolio = df.loc[df.DATE == month].sort_values(by=chr, ascending=False).reset_index(drop=True)[-df.loc[df.DATE == month].shape[0]//10:]['permno'].to_list()
         
-        long_charas = df.loc[df.DATE == month].set_index('permno').loc[long_portfolio][charas]
-        short_charas = df.loc[df.DATE == month].set_index('permno').loc[short_portfolio][charas]
+        long_charas = df.loc[df.DATE == month].set_index('permno').loc[long_portfolio][CHARAS_LIST]
+        short_charas = df.loc[df.DATE == month].set_index('permno').loc[short_portfolio][CHARAS_LIST]
         
         mon_portfolio_chara.append([month] + (0.5*(long_charas.mean() - short_charas.mean())).to_list())
 
-    return pd.DataFrame(mon_portfolio_chara, index=p_name, columns=['DATE']+charas)
+    return pd.DataFrame(mon_portfolio_chara, index=p_name, columns=['DATE']+CHARAS_LIST)
 
 
 
@@ -91,13 +105,12 @@ if __name__ == '__main__':
     # pre-process share data
     processed_df = Parallel(n_jobs=-1)(delayed(pre_process)(d) for d in tqdm(datashare.DATE.drop_duplicates().to_list(), colour='green', desc='Processing'))
     processed_df = pd.concat(processed_df)
-    processed_df[['permno', 'DATE']] = processed_df[['permno', 'DATE']].astype(int)
 
     ##TODO: calculate portfolio returns (or download preprocessed data)
-    # iter_list = list(product(datashare.DATE.drop_duplicates(), charas))
+    # iter_list = list(product(datashare.DATE.drop_duplicates(), CHARAS_LIST))
     # portfolio_rets = Parallel(n_jobs=-1)(delayed(cal_portfolio_ret)(it, df=processed_df) for it in tqdm(iter_list, colour='green', desc='Calculating'))
-    # portfolio_rets = pd.DataFrame(np.array(portfolio_rets).reshape(-1, 94), index=datashare.DATE.drop_duplicates(), columns=charas).reset_index()
-    # portfolio_rets[charas] = portfolio_rets[charas].astype(np.float16)
+    # portfolio_rets = pd.DataFrame(np.array(portfolio_rets).reshape(-1, 94), index=datashare.DATE.drop_duplicates(), columns=CHARAS_LIST).reset_index()
+    # portfolio_rets[CHARAS_LIST] = portfolio_rets[CHARAS_LIST].astype(np.float16)
     
     
     ##TODO: calculate portfolio characteristics (or download preprocessed data)

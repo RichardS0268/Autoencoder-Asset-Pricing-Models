@@ -8,16 +8,15 @@ from dateutil.relativedelta import relativedelta
 import pandas as pd
 import numpy as np
 
-from utils import charas, HiddenPrints
+from utils import *
 from .modelBase import modelBase
 
 
-
 class IPCA(modelBase):
-    def __init__(self, K, portfolio=True):
+    def __init__(self, K, omit_char=[]):
         super(IPCA, self).__init__(f'IPCA_{K}')
         self.K = K
-        self.portfolio = portfolio
+        self.omit_char = omit_char
         self.__prepare_data()
 
 
@@ -26,7 +25,7 @@ class IPCA(modelBase):
         portfolio_ret=  pd.read_pickle('data/portfolio_ret.pkl')
         self.p_charas['p_ret'] = np.zeros(self.p_charas.shape[0])
         self.train_p_charas = self.p_charas.loc[self.p_charas.DATE <= self.test_period[1]].copy(deep=False).reset_index().set_index(['index', 'DATE']).sort_index()
-        for chr in charas:
+        for chr in CHARAS_LIST:
             self.train_p_charas.loc[f'p_{chr}', 'p_ret'] = portfolio_ret.loc[portfolio_ret.DATE <= self.test_period[1]][chr].values
         
         
@@ -43,6 +42,7 @@ class IPCA(modelBase):
     def inference(self, month):
         X_pred = self.p_charas.drop('p_ret', axis=1).loc[self.p_charas.DATE == month].copy(deep=False).reset_index().set_index(['index', 'DATE']).sort_index()
         return self.regr.predict(X_pred, mean_factor=True) # (N, 1)
+    
     
     def predict(self, month):
         lag_X = self.p_charas.drop('p_ret', axis=1).loc[self.p_charas.DATE < month].copy(deep=False).reset_index().groupby('index').mean()
