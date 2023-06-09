@@ -62,7 +62,7 @@ class CA_base(nn.Module, modelBase):
         if align_df.isnull().values.any():
             assert False, f'There is nan in align_df of : {month}'
         # return stock index (L), beta_nn_input (94*L=K*L), factor_nn_input (94*1=L*1), labels (L, )
-        return align_df.index, align_df.values[:, :-1].T, factor_nn_input.T.values , align_df.values[:, -1].T, align_df
+        return align_df.index, align_df.values[:, :-1].T, factor_nn_input.T.values , align_df.values[:, -1].T
     
     
     def dataloader(self, period): 
