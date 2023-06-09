@@ -1,10 +1,6 @@
 import sys
 sys.path.append('../')
 
-from ipca import InstrumentedPCA
-import datetime
-from dateutil.relativedelta import relativedelta
-
 import pandas as pd
 import numpy as np
 
@@ -89,6 +85,9 @@ class IPCA(modelBase):
     
     
     def predict(self, month):
+        if self.refit_cnt == 0:
+            return self.inference(month)
+        
         lag_f_hat = []
         for mon in self.mon_list[(self.mon_list >= 19870101) & (self.mon_list < month)]:
             Z = self.p_charas.loc[self.p_charas.DATE == mon][CHARAS_LIST].values # N * L
@@ -103,5 +102,4 @@ class IPCA(modelBase):
         
         # return average of prevailing sample hat{f} (from 198701) up to t-1
         avg_lag_f = np.mean(lag_f_hat, axis=0)
-        return (beta @ avg_lag_f).flatten()
-    
+        return beta @ avg_lag_f
