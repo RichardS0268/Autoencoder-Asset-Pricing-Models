@@ -1,18 +1,19 @@
+import os
+import pandas as pd
+import numpy as np
+import collections
+import datetime
+import calendar
+from .modelBase import modelBase
+from utils import CHARAS_LIST
+
+from dateutil.relativedelta import relativedelta
+
 import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader, TensorDataset
-import pandas as pd
-import numpy as np
-from .modelBase import modelBase
-from utils import CHARAS_LIST
-import datetime
-import calendar
-from dateutil.relativedelta import relativedelta
-
-from models.Attentions import *
 
 MAX_EPOCH = 200
-
 
 
 class CA_base(nn.Module, modelBase):
@@ -23,7 +24,9 @@ class CA_base(nn.Module, modelBase):
         self.factor_nn = None
         self.optimizer = None
         self.criterion = None
-        self.omit_char = []
+        self.omit_char = omit_char
+        
+        self.factor_nn_pred = []
         
         self.device = device
 
@@ -96,7 +99,7 @@ class CA_base(nn.Module, modelBase):
     ##TODO: train_one_epoch
     def __train_one_epoch(self):
         epoch_loss = 0.0
-        for i, (beta_nn_input, factor_nn_input, labels)  in enumerate(self.train_dataloader):
+        for i, (beta_nn_input, factor_nn_input, labels) in enumerate(self.train_dataloader):
             self.optimizer.zero_grad()
             # beta_nn_input reshape: (1, 94, N) -> (N, 94)
             # factor_nn_input reshape: (1, 94, 1) -> (1, 94)
@@ -136,6 +139,9 @@ class CA_base(nn.Module, modelBase):
     
     
     def train_model(self):
+        if 'saved_models' not in os.listdir('./'):
+            os.mkdir('saved_models')
+        
         self.train_dataloader = self.dataloader(self.train_period)
         self.valid_dataloader = self.dataloader(self.valid_period)
         self.test_dataloader = self.dataloader(self.test_period)
@@ -154,6 +160,7 @@ class CA_base(nn.Module, modelBase):
             ##TODO, valid and early stop
             with torch.no_grad():
                 valid_error = self.__valid_one_epoch()
+                
             valid_loss.append(valid_error)
             if valid_error < min_error:
                 min_error = valid_error
@@ -163,10 +170,10 @@ class CA_base(nn.Module, modelBase):
             else:
                 no_update_steps += 1
             
-            if no_update_steps > 20: # early stop
+            if no_update_steps > 2: # early stop, if consecutive 3 epoches no improvement on validation set
                 print(f'Early stop at epoch {i}')
                 break
-            # load from saved model
+            # load from (best) saved model
             self.load_state_dict(torch.load(f'./saved_models/{self.name}.pt'))
         return train_loss, valid_loss
     
@@ -205,27 +212,40 @@ class CA_base(nn.Module, modelBase):
         _, _, factor_nn_input, _ = self._get_item(month)
 
         factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
-        return self.factor_nn(factor_nn_input).T
+        factor_pred = self.factor_nn(factor_nn_input).T
+        
+        self.factor_nn_pred.append(factor_pred)
+        
+        return factor_pred
     
     
     def cal_delayed_Factor(self, month):
         # calculate the last day of the previous month
-        prev_month = datetime.datetime.strptime(str(month), '%Y%m%d') - relativedelta(months=1)
-        prev_month = datetime.datetime(prev_month.year, prev_month.month, calendar.monthrange(prev_month.year, prev_month.month)[1]).strftime('%Y%m%d')
-        prev_month = int(prev_month)
-        
-        _, _, factor_nn_input, _ = self._get_item(prev_month)
+        if self.refit_cnt == 0:
+            avg_f_pred = self.factor_nn_pred[0] # input of the first predict take hat{f}_t
+            # print(avg_f_pred.shape)
+        else:
+            avg_f_pred = torch.mean(torch.stack(self.factor_nn_pred[:self.refit_cnt]), dim=0)
 
-        factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
-        return self.factor_nn(factor_nn_input).T
+        return avg_f_pred
     
     
     def reset_weight(self):
-        def init_weight(m):
-            if isinstance(m, nn.Linear):
-                nn.init.xavier_uniform_(m.weight)
-                nn.init.zeros_(m.bias)
-        self.apply(init_weight)
+        for layer in self.beta_nn: # reset beta_nn parameters
+            if hasattr(layer, 'reset_parameters'):
+                layer.reset_parameters()
+        
+        for layer in self.factor_nn: # reset factor_nn parameters
+            if hasattr(layer, 'reset_parameters'):
+                layer.reset_parameters()
+                
+        self.optimizer.state = collections.defaultdict(dict) # reset optimizer state
+        
+        # def init_weight(m):
+        #     if isinstance(m, nn.Linear):
+        #         nn.init.xavier_uniform_(m.weight)
+        #         nn.init.zeros_(m.bias)
+        # self.apply(init_weight)
 
 
     def release_gpu(self):
@@ -241,7 +261,7 @@ class CA_base(nn.Module, modelBase):
 
 class CA0(CA_base):
     def __init__(self, hidden_size, lr=0.001, omit_char=[], device='cuda'):
-        CA_base.__init__(self, f'CA0_{hidden_size}', omit_char=omit_char, device=device)
+        CA_base.__init__(self, name=f'CA0_{hidden_size}', omit_char=omit_char, device=device)
         # P -> K
         self.beta_nn = nn.Sequential(
             # output layer
@@ -258,7 +278,7 @@ class CA0(CA_base):
 
 class CA1(CA_base):
     def __init__(self, hidden_size, dropout=0.5, lr=0.001, omit_char=[], device='cuda'):
-        CA_base.__init__(self, f'CA1_{hidden_size}', device=device)
+        CA_base.__init__(self, name=f'CA1_{hidden_size}', omit_char=omit_char, device=device)
         self.dropout = dropout
         # P -> 32 -> K
         self.beta_nn = nn.Sequential(
@@ -281,7 +301,7 @@ class CA1(CA_base):
         
 class CA2(CA_base):
     def __init__(self, hidden_size, dropout=0.5, lr=0.001, omit_char=[], device='cuda'):
-        CA_base.__init__(self, f'CA2_{hidden_size}', device=device)
+        CA_base.__init__(self, name=f'CA2_{hidden_size}', omit_char=omit_char, device=device)
         self.dropout = dropout
         # P -> 32 -> 16 -> K
         self.beta_nn = nn.Sequential(
@@ -309,7 +329,7 @@ class CA2(CA_base):
 
 class CA3(CA_base):
     def __init__(self, hidden_size, dropout=0.5, lr=0.001, omit_char=[], device='cuda'):
-        CA_base.__init__(self, f'CA3_{hidden_size}', device=device)
+        CA_base.__init__(self, name=f'CA3_{hidden_size}', omit_char=omit_char, device=device)
         self.dropout = dropout
         # P -> 32 -> 16 -> 8 -> K
         self.beta_nn = nn.Sequential(
@@ -334,132 +354,5 @@ class CA3(CA_base):
             nn.Linear(94, hidden_size)
         )
         
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr, weight_decay=0.01)
         self.criterion = nn.MSELoss().to(device)
-
-
-
-class CAA2(CA_base):
-    def __init__(self, hidden_size, dropout=0.5, lr=0.001, omit_char=[], device="cuda"):
-        CA_base.__init__(self, f'CAA2_{hidden_size}', device=device)
-        self.dropout = dropout
-
-        self.beta_nn = nn.Sequential(
-            nn.Linear(94, 32),
-            nn.BatchNorm1d(32),
-            nn.ReLU(),
-            nn.Dropout(self.dropout),
-
-            nn.Linear(32, 16),
-            nn.BatchNorm1d(16),
-            nn.ReLU(),
-            nn.Dropout(self.dropout),
-
-            nn.Linear(16, 8),
-            nn.BatchNorm1d(8),
-            nn.ReLU(),
-            nn.Dropout(self.dropout),
-
-            nn.Linear(8, hidden_size)
-        )
-        self.beta_attention = CrossAttention(hidden_size, hidden_size, self.dropout)
-        self.factor_attention = CrossAttention(hidden_size, hidden_size, self.dropout)
-        self.factor_nn = nn.Sequential(
-            nn.Linear(94, hidden_size)
-        )
-        self.optimizer = torch.optim.Adam(self.parameters(), lr=lr)
-        self.criterion = nn.MSELoss().to(device)
-    
-    def forward(self, char, pfret, query):
-        beta = self.beta_nn(char) # (N, hidden_size)
-        factor = self.factor_nn(pfret) # (1, hidden_size)
-        # get dot product 
-        # query = torch.matmul(beta, factor.T) # (N, 1)
-        # get attention
-        # print(beta.shape, factor.shape, query.shape)
-        # by now beta is (N, hidden_size), factor is (1, hidden_size), query is (N, 1)
-        # convert beta to (N, hidden_size, 1), factor to (1, hidden_size, 1)
-        query = query.unsqueeze(-1)
-        beta = beta.unsqueeze(-1)
-        factor = factor.unsqueeze(-1)
-        beta_a = self.beta_attention(query, beta) # (N, hidden_size)
-        factor_a = self.factor_attention(query, factor) # (1, hidden_size)
-
-        # print(beta_a.shape, factor_a.shape)
-
-        return torch.sum(beta_a * factor_a, dim=1)  # (N, 1) -> (N, )
-
-    def __train_one_epoch(self):
-        epoch_loss = 0.0
-        for i, (beta_nn_input, factor_nn_input, labels)  in enumerate(self.train_dataloader):
-            self.optimizer.zero_grad()
-            # beta_nn_input reshape: (1, 94, N) -> (N, 94)
-            # factor_nn_input reshape: (1, 94, 1) -> (1, 94)
-            # labels reshape: (1, N) -> (N, )
-            beta_nn_input = beta_nn_input.squeeze(0).T
-            factor_nn_input = factor_nn_input.squeeze(0).T
-            labels = labels.squeeze(0)
-            output = self.forward(beta_nn_input, factor_nn_input, labels.unsqueeze(-1))
-            # print(output.shape, labels.shape)
-            loss = self.criterion(output, labels)
-            
-            loss.backward()
-            self.optimizer.step()
-            epoch_loss += loss.item()
-
-            if i % 100 == 0:
-                # print(f'Batches: {i}, loss: {loss.item()}')
-                pass
-
-        return epoch_loss / len(self.train_dataloader)
-
-    def train_model(self):
-        self.train_dataloader = self.dataloader(self.train_period)
-        self.valid_dataloader = self.dataloader(self.valid_period)
-        self.test_dataloader = self.dataloader(self.test_period)
-        
-        min_error = np.Inf
-        no_update_steps = 0
-        valid_loss = []
-        train_loss = []
-        for i in range(MAX_EPOCH):
-            # print(f'Epoch {i}')
-            self.train()
-            train_error = self.__train_one_epoch()
-            train_loss.append(train_error)
-            
-            self.eval()
-            ##TODO, valid and early stop
-            with torch.no_grad():
-                valid_error = self.__valid_one_epoch()
-            valid_loss.append(valid_error)
-            if valid_error < min_error:
-                min_error = valid_error
-                no_update_steps = 0
-                # save model
-                torch.save(self.state_dict(), f'./saved_models/{self.name}.pt')
-            else:
-                no_update_steps += 1
-            
-            if no_update_steps > 20: # early stop
-                print(f'Early stop at epoch {i}')
-                break
-            # load from saved model
-            self.load_state_dict(torch.load(f'./saved_models/{self.name}.pt'))
-        return train_loss, valid_loss
-    
-    def __valid_one_epoch(self):
-        epoch_loss = 0.0
-        for i, (beta_nn_input, factor_nn_input, labels) in enumerate(self.valid_dataloader):
-            # beta_nn_input reshape: (1, 94, N) -> (N, 94)
-            # factor_nn_input reshape: (1, 94, 1) -> (1, 94)
-            # labels reshape: (1, N) -> (N, )
-            beta_nn_input = beta_nn_input.squeeze(0).T
-            factor_nn_input = factor_nn_input.squeeze(0).T
-            labels = labels.squeeze(0)
-
-            output = self.forward(beta_nn_input, factor_nn_input, labels.unsqueeze(-1))
-            loss = self.criterion(output, labels)
-            epoch_loss += loss.item()
-
-        return epoch_loss / len(self.valid_dataloader)

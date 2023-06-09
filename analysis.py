@@ -11,9 +11,9 @@ def calculate_R2(model, type):
     portfolio_ret = pd.read_pickle('data/portfolio_ret.pkl')
 
     oos_ret = portfolio_ret.loc[(portfolio_ret['DATE'] >= OOS_start) & (portfolio_ret['DATE'] <= OOS_end)]
-    print('type: ', type)
+    # print('type: ', type)
     output_path = f'results/{type}/{model.name}_{type}.csv'
-    print('path : ', output_path)
+    # print('path : ', output_path)
     model_output = pd.read_csv(output_path)
     
     residual_square = (oos_ret.set_index('DATE') - model_output.set_index('DATE'))**2
@@ -27,6 +27,9 @@ def calculate_R2(model, type):
 
 
 def alpha_plot(model, type, save_dir='alpha_imgs'):
+    if type not in os.listdir(save_dir):
+        os.mkdir(f'{save_dir}/{type}')
+    
     portfolio_ret = pd.read_pickle('data/portfolio_ret.pkl')
     oos_result = portfolio_ret.loc[(portfolio_ret['DATE'] >= OOS_start) & (portfolio_ret['DATE'] <= OOS_end)].set_index('DATE')
     
@@ -53,10 +56,10 @@ def alpha_plot(model, type, save_dir='alpha_imgs'):
     plt.scatter(pricing_error_analysis.loc[~significant_mask]['raw ret'], pricing_error_analysis.loc[~significant_mask]['alpha'], marker='o', color='b', alpha=0.6, label=f'#Alphas(|t|<3.0)={94-np.sum(significant_mask*1.0)}')
     plt.plot(np.linspace(lower_point, upper_point, 10), np.linspace(lower_point, upper_point, 10), color='black')
 
-    plt.ylabel('Alpha')
-    plt.xlabel('Raw Return')
+    plt.ylabel('Alpha (%)')
+    plt.xlabel('Raw Return (%)')
     plt.legend()
 
     plt.title(model.name)
-    plt.savefig(f'{save_dir}/{type}/{model}_{type}_alpha_plot.png')
+    plt.savefig(f'{save_dir}/{type}/{model.name}_{type}_alpha_plot.png')
     plt.close()

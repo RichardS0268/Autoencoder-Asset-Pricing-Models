@@ -38,7 +38,7 @@ class FF(modelBase):
         self.beta_matrix = pd.DataFrame(self.beta_matrix, columns=self.fname[:self.K], index=CHARAS_LIST)
     
         
-    def calBeta(self, month):
+    def calBeta(self, month): # beta is time invariant
         return self.beta_matrix # N * K
         
             
@@ -48,5 +48,6 @@ class FF(modelBase):
         
     def cal_delayed_Factor(self, month):
         last_mon = int(str(pd.to_datetime(str(month)) - relativedelta(months=1)).split(' ')[0].replace('-', '')[:-2])
-        return self.FFf[self.fname[:self.K]].loc[self.valid_period[0]//100:last_mon].mean()
+        # return average of prevailing sample hat{f} (from 198701) up to t-1
+        return self.FFf[self.fname[:self.K]].loc[198701:last_mon].mean() 
         

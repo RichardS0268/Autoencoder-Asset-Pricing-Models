@@ -43,6 +43,7 @@ def model_inference_and_predict(model):
         # model refit (change train period and valid period)
         model.refit()
 
+    # print(inference_result)
     inference_result = pd.DataFrame(inference_result, index=test_mons, columns=CHARAS_LIST)
     inference_result.to_csv(f'results/inference/{model.name}_inference.csv')
     
@@ -182,12 +183,24 @@ if __name__ == "__main__":
     parser.add_argument('--omit_char', type=str, default='')
 
     args = parser.parse_args()
+    
+    if 'results' not in os.listdir('./'):
+        os.mkdir('results')
+    if 'train_loss' not in os.listdir('./results'):
+        os.mkdir('results/train_loss')
+    if 'inference' not in os.listdir('./results'):
+        os.mkdir('results/inference')
+    if 'predict' not in os.listdir('./results'):
+        os.mkdir('results/predict')
+    if 'alpha_imgs' not in os.listdir('./'):
+        os.mkdir('alpha_imgs')
+        
         
     models_name = []
     R_square = []
     for g in product(args.Model.split(' '), args.K.split(' '), args.omit_char.split(' ')):
-        model = model_selection(g[0], int(g[1]))
-        print(f"Model: {model['name']}")
+        model = model_selection(g[0], int(g[1]), [g[2]])
+        print(f"{time.strftime('%a, %d %b %Y %H:%M:%S +0800', time.gmtime())} | Model: {model['name']} | {g[2]}")
         models_name.append(model['name'])
 
         if model['name'].split('_')[0][:-1] == 'CA':
@@ -197,29 +210,31 @@ if __name__ == "__main__":
             model_inference_and_predict(model['model'])
         print('name : ', model['name'])
         gc.collect()    
-        # TODO: unknown typr for calculate R2
+        # TODO: unknown type for calculate R2
         # R_square.append(calculate_R2(model['model'], model['name'].split('_')[0][:-1]))
         R_square.append(calculate_R2(model['model'], 'inference'))
-        if len(model['omit_char']):
-            alpha_plot(model['model'], model['name'].split('_')[0][:-1], save_dir='alpha_imgs')
+        
+        if not len(model['omit_char']):
+            alpha_plot(model['model'], 'inference', save_dir='alpha_imgs')
+            # alpha_plot(model['model'], 'predict', save_dir='alpha_imgs')
 
         del model
 
     # save R_square to json
     p = time.localtime()
-    time_str = f"{p.tm_year}-{p.tm_mon}-{p.tm_mday}-{p.tm_hour}-{p.tm_min}-{p.tm_sec}"
+    time_str = "{:0>4d}-{:0>2d}-{:0>2d}_{:0>2d}:{:0>2d}:{:0>2d}".format(p.tm_year, p.tm_mon, p.tm_mday, p.tm_hour, p.tm_min, p.tm_sec)
     filename = f"R_squares/{time_str}.json"
     obj = {
-        "models": [],
-        'omit_char': [],
-        "R2": R_square,
+        "models": models_name,
+        'omit_char': args.omit_char.split(' '),
+        "R2_total": R_square,
     }
 
     with open(filename, "w") as out_file:
         json.dump(obj, out_file)
 
     # git push
-    git_push(f"Run main.py")
+    # git_push(f"Run main.py")
 
 
     

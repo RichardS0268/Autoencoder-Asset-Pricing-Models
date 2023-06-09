@@ -7,6 +7,7 @@ class modelBase:
     def __init__(self, name):
         self.name = name
         self.train_idx = 0
+        self.refit_cnt = 0
         
         # initial train, valid and test periods are default accroding to original paper
         self.train_period = [19570101, 19741231]
@@ -68,8 +69,10 @@ class modelBase:
     
     
     def refit(self):
-        self.train_period[1] += 10000
+        # self.train_period[1] += 10000 # method in original paper: increase training size by one year each time refit
+        self.train_period = (pd.Series(self.train_period) + 10000).to_list() # rolling training
         self.valid_period = (pd.Series(self.valid_period) + 10000).to_list()
         self.test_period = (pd.Series(self.test_period) + 10000).to_list()
+        self.refit_cnt += 1
         
         

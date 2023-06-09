@@ -103,7 +103,7 @@ def cal_portfolio_charas(month, df):
 
 if __name__ == '__main__':
     # pre-process share data
-    processed_df = Parallel(n_jobs=-1)(delayed(pre_process)(d) for d in tqdm(datashare.DATE.drop_duplicates().to_list(), colour='green', desc='Processing'))
+    processed_df = Parallel(n_jobs=1)(delayed(pre_process)(d) for d in tqdm(datashare.DATE.drop_duplicates().to_list(), colour='green', desc='Processing'))
     processed_df = pd.concat(processed_df)
 
     ##TODO: calculate portfolio returns (or download preprocessed data)
