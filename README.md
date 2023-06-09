@@ -8,4 +8,6 @@ python data_prepare.py
 
 # 
 python main.py --Model 'CA0 CA1 CA2 CA3' --K '1 2 3 4 5 6'
+
+nohup python -u main.py --Model 'CA0' --K '5' --omit_char 'mvel1 mom1m idiovol retvol mom6m beta mom12m turn ill baspread betasq mom36m std_turn dolvol zerotrade' > logs/CA0.log 2>&1 &
 ```
