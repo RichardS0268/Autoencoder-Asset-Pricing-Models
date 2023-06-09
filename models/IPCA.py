@@ -85,7 +85,7 @@ class IPCA(modelBase):
         y = self.portfolio_ret.loc[self.portfolio_ret.DATE == month][CHARAS_LIST].values.T # N * 1
         beta = Z @ self.gamma # N * K
         f_hat = np.array(np.matrix(beta.T @ beta).I @ beta.T @ y) # K * 1
-        return beta @ f_hat
+        return (beta @ f_hat).flatten()
     
     
     def predict(self, month):
@@ -103,5 +103,5 @@ class IPCA(modelBase):
         
         # return average of prevailing sample hat{f} (from 198701) up to t-1
         avg_lag_f = np.mean(lag_f_hat, axis=0)
-        return beta @ avg_lag_f
+        return (beta @ avg_lag_f).flatten()
     
