@@ -66,5 +66,5 @@ class PCA(modelBase):
         factors = np.array(factors).squeeze(1).T # K * T
         avg_delay_f = np.mean(factors, axis=1).reshape(-1, 1) # K * 1
         
-        return np.real(avg_delay_f)
+        return np.real(avg_delay_f.flatten())
     

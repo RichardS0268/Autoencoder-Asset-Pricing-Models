@@ -39,7 +39,7 @@ def model_inference_and_predict(model):
         
         for m in g[1].to_list():
             inference_result.append(model.inference(m))
-            if not len(model.omit_char):
+            if not len(model.omit_char[0]):
                 predict_result.append(model.predict(m))
         # model refit (change train period and valid period)
         model.refit()
@@ -48,7 +48,7 @@ def model_inference_and_predict(model):
     inference_result = pd.DataFrame(inference_result, index=test_mons, columns=CHARAS_LIST)
     inference_result.to_csv(f'results/inference/{model.name}_inference.csv')
     
-    if not len(model.omit_char):
+    if not len(model.omit_char[0]):
         predict_result = pd.DataFrame(predict_result, index=test_mons, columns=CHARAS_LIST)
         predict_result.to_csv(f'results/predict/{model.name}_predict.csv')
     
@@ -110,7 +110,7 @@ def model_inference_and_predict_CA(model):
     inference_result = pd.DataFrame(inference_result.values.T, index=test_mons, columns=CHARAS_LIST)
     inference_result.to_csv(f'results/inference/{model.name}_inference.csv')
     
-    if not len(model.omit_char):
+    if not len(model.omit_char[0]):
         predict_result = pd.DataFrame(predict_result.values.T, index=test_mons, columns=CHARAS_LIST)
         predict_result.to_csv(f'results/predict/{model.name}_predict.csv')
 
@@ -198,8 +198,8 @@ if __name__ == "__main__":
         os.mkdir('results/inference')
     if 'predict' not in os.listdir('./results'):
         os.mkdir('results/predict')
-    if 'alpha_imgs' not in os.listdir('./'):
-        os.mkdir('alpha_imgs')
+    if 'imgs' not in os.listdir('./'):
+        os.mkdir('imgs')
         
         
     models_name = []
@@ -220,15 +220,15 @@ if __name__ == "__main__":
         # R_square.append(calculate_R2(model['model'], model['name'].split('_')[0][:-1]))
         R_square.append(calculate_R2(model['model'], 'inference'))
         
-        if not len(model['omit_char']):
-            alpha_plot(model['model'], 'inference', save_dir='alpha_imgs')
+        if not len(model['omit_char'][0]):
+            alpha_plot(model['model'], 'inference', save_dir='imgs')
             # alpha_plot(model['model'], 'predict', save_dir='alpha_imgs')
 
         del model
 
     # save R_square to json
     p = time.localtime()
-    time_str = "{:0>4d}-{:0>2d}-{:0>2d}_{:0>2d}:{:0>2d}:{:0>2d}".format(p.tm_year, p.tm_mon, p.tm_mday, p.tm_hour, p.tm_min, p.tm_sec)
+    time_str = "{:0>4d}-{:0>2d}-{:0>2d}_{:0>2d}-{:0>2d}-{:0>2d}".format(p.tm_year, p.tm_mon, p.tm_mday, p.tm_hour, p.tm_min, p.tm_sec)
     filename = f"R_squares/{time_str}.json"
     obj = {
         "models": models_name,
