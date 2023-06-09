@@ -57,17 +57,12 @@ class CA_base(nn.Module, modelBase):
         align_df = beta_nn_input.copy(deep=False).dropna()
             
         factor_nn_input = self.portfolio_ret.loc[self.portfolio_ret['DATE'] == month][CHARAS_LIST]
-        
-        # if some variables need be omitted
-        if len(self.omit_char):
-            beta_nn_input[self.omit_char] = beta_nn_input[self.omit_char] * 0.0
-            factor_nn_input[self.omit_char] = factor_nn_input[self.omit_char] * 0.0
          
         # exit(0) if there is any nan in align_df
         if align_df.isnull().values.any():
             assert False, f'There is nan in align_df of : {month}'
-        # return stock index (N), beta_nn_input (94*N), factor_nn_input (94*1), labels (N, )
-        return align_df.index, align_df.values[:, :-1].T, factor_nn_input.T.values , align_df.values[:, -1].T
+        # return stock index (L), beta_nn_input (94*L=K*L), factor_nn_input (94*1=L*1), labels (L, )
+        return align_df.index, align_df.values[:, :-1].T, factor_nn_input.T.values , align_df.values[:, -1].T, align_df
     
     
     def dataloader(self, period): 
@@ -204,12 +199,25 @@ class CA_base(nn.Module, modelBase):
     def calBeta(self, month):
         _, beta_nn_input, _, _ = self._get_item(month)
         
+        # if some variables need be omitted
+        if len(self.omit_char[0]):
+            print(beta_nn_input.shape)
+            beta_nn_input = pd.DataFrame(beta_nn_input.T, columns=CHARAS_LIST)
+            beta_nn_input[self.omit_char] = beta_nn_input[self.omit_char] * 0.0
+            beta_nn_input = beta_nn_input.values.T
+        
         beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
         return self.beta_nn(beta_nn_input)
     
     
     def calFactor(self, month):
         _, _, factor_nn_input, _ = self._get_item(month)
+        
+        # if some variables need be omitted
+        if len(self.omit_char[0]):
+            factor_nn_input = pd.DataFrame(factor_nn_input.T, columns=CHARAS_LIST)
+            factor_nn_input[self.omit_char] = factor_nn_input[self.omit_char] * 0.0
+            factor_nn_input = factor_nn_input.values.T
 
         factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
         factor_pred = self.factor_nn(factor_nn_input).T
