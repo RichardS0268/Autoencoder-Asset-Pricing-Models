@@ -39,7 +39,8 @@ def model_inference_and_predict(model):
         
         for m in g[1].to_list():
             inference_result.append(model.inference(m))
-            predict_result.append(model.predict(m))
+            if not len(model.omit_char):
+                predict_result.append(model.predict(m))
         # model refit (change train period and valid period)
         model.refit()
 
@@ -47,8 +48,9 @@ def model_inference_and_predict(model):
     inference_result = pd.DataFrame(inference_result, index=test_mons, columns=CHARAS_LIST)
     inference_result.to_csv(f'results/inference/{model.name}_inference.csv')
     
-    predict_result = pd.DataFrame(predict_result, index=test_mons, columns=CHARAS_LIST)
-    predict_result.to_csv(f'results/predict/{model.name}_predict.csv')
+    if not len(model.omit_char):
+        predict_result = pd.DataFrame(predict_result, index=test_mons, columns=CHARAS_LIST)
+        predict_result.to_csv(f'results/predict/{model.name}_predict.csv')
     
     
     
@@ -85,18 +87,17 @@ def model_inference_and_predict_CA(model):
         for m in g[1].to_list():
             m_stock_index, _, _, _ = model._get_item(m)
             stock_index = pd.concat([stock_index, pd.Series(m_stock_index)]).drop_duplicates().astype(int)
-            inference_R = model.inference(m) # return (N, 1)
-            predict_R = model.predict(m) # reutrn (N, 1)
-
             # move inference_R and predict_R to cpu
+            inference_R = model.inference(m) # return (N, 1)
             inference_R = inference_R.cpu().detach().numpy()
-            predict_R = predict_R.cpu().detach().numpy()
-
             inference_R = pd.DataFrame(inference_R, index=m_stock_index, columns=[m])
-            predict_R = pd.DataFrame(predict_R, index=m_stock_index, columns=[m])
-
             inference_result = pd.concat([inference_result.reset_index(drop=True), inference_R.reset_index(drop=True)], axis=1) # (N, T)
-            predict_result = pd.concat([predict_result.reset_index(drop=True), predict_R.reset_index(drop=True)], axis=1) # (N, T)
+            
+            if not len(model.omit_char):
+                predict_R = model.predict(m) # reutrn (N, 1)
+                predict_R = predict_R.cpu().detach().numpy()
+                predict_R = pd.DataFrame(predict_R, index=m_stock_index, columns=[m])
+                predict_result = pd.concat([predict_result.reset_index(drop=True), predict_R.reset_index(drop=True)], axis=1) # (N, T)
 
             # DEBUG:
             # save inference_R and predict_R to csv
@@ -109,18 +110,23 @@ def model_inference_and_predict_CA(model):
     inference_result = pd.DataFrame(inference_result.values.T, index=test_mons, columns=CHARAS_LIST)
     inference_result.to_csv(f'results/inference/{model.name}_inference.csv')
     
-    predict_result = pd.DataFrame(predict_result.values.T, index=test_mons, columns=CHARAS_LIST)
-    predict_result.to_csv(f'results/predict/{model.name}_predict.csv')
+    if not len(model.omit_char):
+        predict_result = pd.DataFrame(predict_result.values.T, index=test_mons, columns=CHARAS_LIST)
+        predict_result.to_csv(f'results/predict/{model.name}_predict.csv')
 
     # GC: release RAM memory(model)
     del model
     gc.collect()
     return inference_result, predict_result
 
+
+
 def git_push(msg):
     os.system('git add R_squares')
     os.system(f'git commit -m "{msg}"')
     os.system('git push')
+
+
 
 def model_selection(model_type, model_K, omit_char=[]):
     assert model_type in ['FF', 'PCA', 'IPCA', 'CA0', 'CA1', 'CA2', 'CA3'], f'No Such Model: {model_type}'
