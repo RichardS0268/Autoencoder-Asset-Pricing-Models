@@ -2,12 +2,8 @@ import os
 import pandas as pd
 import numpy as np
 import collections
-import datetime
-import calendar
 from .modelBase import modelBase
 from utils import CHARAS_LIST
-
-from dateutil.relativedelta import relativedelta
 
 import torch
 from torch import nn
@@ -196,26 +192,26 @@ class CA_base(nn.Module, modelBase):
         return output, labels
 
 
-    def calBeta(self, month):
+    def calBeta(self, month, skip_char=[]):
         _, beta_nn_input, _, _ = self._get_item(month)
         
         # if some variables need be omitted
-        if len(self.omit_char[0]):
+        if len(skip_char):
             beta_nn_input = pd.DataFrame(beta_nn_input.T, columns=CHARAS_LIST)
-            beta_nn_input[self.omit_char] = beta_nn_input[self.omit_char] * 0.0
+            beta_nn_input[skip_char] = beta_nn_input[skip_char] * 0.0
             beta_nn_input = beta_nn_input.values.T
         
         beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
-        return self.beta_nn(beta_nn_input)
+        return self.beta_nn(beta_nn_input) # N * K
     
     
-    def calFactor(self, month):
+    def calFactor(self, month, skip_char=[]):
         _, _, factor_nn_input, _ = self._get_item(month)
         
         # if some variables need be omitted
-        if len(self.omit_char[0]):
+        if len(skip_char):
             factor_nn_input = pd.DataFrame(factor_nn_input.T, columns=CHARAS_LIST)
-            factor_nn_input[self.omit_char] = factor_nn_input[self.omit_char] * 0.0
+            factor_nn_input[skip_char] = factor_nn_input[skip_char] * 0.0
             factor_nn_input = factor_nn_input.values.T
 
         factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
@@ -225,6 +221,23 @@ class CA_base(nn.Module, modelBase):
         
         return factor_pred
     
+    
+    def inference(self, month):
+        if len(self.omit_char) == 0:
+            assert month >= self.test_period[0], f"Month error, {month} is not in test period {self.test_period}"
+            
+            mon_factor, mon_beta = self.calFactor(month), self.calBeta(month)
+            
+            assert mon_beta.shape[1] == mon_factor.shape[0], f"Dimension mismatch between mon_factor: {mon_factor.shape} and mon_beta: {mon_beta.shape}"
+            
+            # R_{N*1} = Beta_{N*K} @ F_{K*1}
+            return mon_beta @ mon_factor
+        else:
+            ret_R = [] # m, N*1
+            for char in self.omit_char:
+                mon_factor, mon_beta = self.calFactor(month, [char]), self.calBeta(month, [char])
+                ret_R.append((mon_beta @ mon_factor).cpu().detach().numpy())
+            return np.array(ret_R).reshape(94, len(self.omit_char)) # N * m
     
     def cal_delayed_Factor(self, month):
         # calculate the last day of the previous month
@@ -247,12 +260,6 @@ class CA_base(nn.Module, modelBase):
                 layer.reset_parameters()
                 
         self.optimizer.state = collections.defaultdict(dict) # reset optimizer state
-        
-        # def init_weight(m):
-        #     if isinstance(m, nn.Linear):
-        #         nn.init.xavier_uniform_(m.weight)
-        #         nn.init.zeros_(m.bias)
-        # self.apply(init_weight)
 
 
     def release_gpu(self):

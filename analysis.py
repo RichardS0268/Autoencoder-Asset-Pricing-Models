@@ -7,17 +7,20 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-def calculate_R2(model, type):
+def calculate_R2(model, type, input=None):
     portfolio_ret = pd.read_pickle('data/portfolio_ret.pkl')
-
     oos_ret = portfolio_ret.loc[(portfolio_ret['DATE'] >= OOS_start) & (portfolio_ret['DATE'] <= OOS_end)]
-    # print('type: ', type)
-    if isinstance(model, str):
-        output_path = f'results/{type}/{model}_{type}.csv'
+
+    if not input:
+        # print('type: ', type)
+        if isinstance(model, str):
+            output_path = f'results/{type}/{model}_{type}.csv'
+        else:
+            output_path = f'results/{type}/{model.name}_{type}.csv'
+        # print('path : ', output_path)
+        model_output = pd.read_csv(output_path)
     else:
-        output_path = f'results/{type}/{model.name}_{type}.csv'
-    # print('path : ', output_path)
-    model_output = pd.read_csv(output_path)
+        model_output = input
     
     for col in model_output.columns: # hard code for format error
         model_output[col] = model_output[col].apply(lambda x: float(str(x).replace('[', '').replace(']', '')))

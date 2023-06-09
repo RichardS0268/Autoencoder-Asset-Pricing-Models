@@ -39,7 +39,7 @@ def model_inference_and_predict(model):
         
         for m in g[1].to_list():
             inference_result.append(model.inference(m))
-            if not len(model.omit_char[0]):
+            if not len(model.omit_char):
                 predict_result.append(model.predict(m))
         # model refit (change train period and valid period)
         model.refit()
@@ -48,7 +48,7 @@ def model_inference_and_predict(model):
     inference_result = pd.DataFrame(inference_result, index=test_mons, columns=CHARAS_LIST)
     inference_result.to_csv(f'results/inference/{model.name}_inference.csv')
     
-    if not len(model.omit_char[0]):
+    if not len(model.omit_char):
         predict_result = pd.DataFrame(predict_result, index=test_mons, columns=CHARAS_LIST)
         predict_result.to_csv(f'results/predict/{model.name}_predict.csv')
     
@@ -62,8 +62,12 @@ def model_inference_and_predict_CA(model):
     model = model.to('cuda')
     mon_list = pd.read_pickle('data/mon_list.pkl')
     test_mons = mon_list.loc[mon_list >= model.test_period[0]]
-    inference_result = pd.DataFrame()
-    predict_result = pd.DataFrame()
+    if not len(model.omit_char):
+        inference_result = pd.DataFrame()
+        predict_result = pd.DataFrame()
+    else:
+        inference_result = []
+        
     T_bar = tqdm(test_mons.groupby(test_mons.apply(lambda x: x//10000)), colour='red', desc=f'{model.name} Inferencing & Predicting')
     
     stock_index = pd.Series(dtype=np.int64)
@@ -87,18 +91,23 @@ def model_inference_and_predict_CA(model):
         for m in g[1].to_list():
             m_stock_index, _, _, _ = model._get_item(m)
             stock_index = pd.concat([stock_index, pd.Series(m_stock_index)]).drop_duplicates().astype(int)
-            # move inference_R and predict_R to cpu
-            inference_R = model.inference(m) # return (N, 1)
-            inference_R = inference_R.cpu().detach().numpy()
-            inference_R = pd.DataFrame(inference_R, index=m_stock_index, columns=[m])
-            inference_result = pd.concat([inference_result.reset_index(drop=True), inference_R.reset_index(drop=True)], axis=1) # (N, T)
-            
+
             if not len(model.omit_char):
+                # move inference_R and predict_R to cpu
+                inference_R = model.inference(m) # return (N, 1)
+                inference_R = inference_R.cpu().detach().numpy()
+                inference_R = pd.DataFrame(inference_R, index=m_stock_index, columns=[m])
+                inference_result = pd.concat([inference_result.reset_index(drop=True), inference_R.reset_index(drop=True)], axis=1) # (N, T)
+                
                 predict_R = model.predict(m) # reutrn (N, 1)
                 predict_R = predict_R.cpu().detach().numpy()
                 predict_R = pd.DataFrame(predict_R, index=m_stock_index, columns=[m])
                 predict_result = pd.concat([predict_result.reset_index(drop=True), predict_R.reset_index(drop=True)], axis=1) # (N, T)
 
+            else:
+                inference_R = model.inference(m) # return (N, m), m is the length of omit_char
+                inference_result.append(inference_R) # (T, N, m)
+                
             # DEBUG:
             # save inference_R and predict_R to csv
             # inference_result.to_csv(f'temp/{model.name}_inference_stock_{m}.csv')
@@ -107,10 +116,10 @@ def model_inference_and_predict_CA(model):
         # refit: change train period and valid period
         model.refit()
 
-    inference_result = pd.DataFrame(inference_result.values.T, index=test_mons, columns=CHARAS_LIST)
-    inference_result.to_csv(f'results/inference/{model.name}_inference.csv')
-    
-    if not len(model.omit_char[0]):
+    if not len(model.omit_char):
+        inference_result = pd.DataFrame(inference_result.values.T, index=test_mons, columns=CHARAS_LIST)
+        inference_result.to_csv(f'results/inference/{model.name}_inference.csv')
+        
         predict_result = pd.DataFrame(predict_result.values.T, index=test_mons, columns=CHARAS_LIST)
         predict_result.to_csv(f'results/predict/{model.name}_predict.csv')
 
@@ -204,25 +213,35 @@ if __name__ == "__main__":
         
     models_name = []
     R_square = []
-    for g in product(args.Model.split(' '), args.K.split(' '), args.omit_char.split(' ')):
-        model = model_selection(g[0], int(g[1]), [g[2]])
-        print(f"{time.strftime('%a, %d %b %Y %H:%M:%S +0800', time.gmtime())} | Model: {model['name']} | {g[2]}")
+    for g in product(args.Model.split(' '), args.K.split(' ')):
+        if isinstance(args.omit_char, str):
+            omit_chars = args.omit_char.split(' ')
+        else:
+            omit_chars = []
+            
+        model = model_selection(g[0], int(g[1]), omit_chars)
+            
+        print(f"{time.strftime('%a, %d %b %Y %H:%M:%S +0800', time.gmtime())} | Model: {model['name']} | {omit_chars}")
         models_name.append(model['name'])
 
         if model['name'].split('_')[0][:-1] == 'CA':
             print('model_inference_and_predict_CA')
-            model_inference_and_predict_CA(model['model'])    
+            # if have omit char, inf_ret (T, N, m)
+            inf_ret, _ = model_inference_and_predict_CA(model['model'])  
         else:
             model_inference_and_predict(model['model'])
         print('name : ', model['name'])
         gc.collect()    
-        # TODO: unknown type for calculate R2
-        # R_square.append(calculate_R2(model['model'], model['name'].split('_')[0][:-1]))
-        R_square.append(calculate_R2(model['model'], 'inference'))
         
-        if not len(model['omit_char'][0]):
+        # TODO: unknown type for calculate R2        
+        if not len(model['omit_char']):
+            R_square.append(calculate_R2(model['model'], 'inference'))
             alpha_plot(model['model'], 'inference', save_dir='imgs')
             # alpha_plot(model['model'], 'predict', save_dir='alpha_imgs')
+        else:
+            for i in range(len(model.omit_char)):
+                inference_r = inf_ret[:, :, i].reshape(-1, 94) # T * N
+                R_square.append(calculate_R2(_, _, inference_r))
 
         del model
 
