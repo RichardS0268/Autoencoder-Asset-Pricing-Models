@@ -122,10 +122,10 @@ if __name__=="__main__":
         total_R2.append(calculate_R2(m, 'inference'))
     R_total = pd.DataFrame([models, total_R2]).T
 
-    # predict_R2 = []
-    # for m in models:
-    #     predict_R2.append(calculate_R2(m, 'predict'))
-    # R_pred = pd.DataFrame([models, predict_R2]).T
+    predict_R2 = []
+    for m in models:
+        predict_R2.append(calculate_R2(m, 'predict'))
+    R_pred = pd.DataFrame([models, predict_R2]).T
     
     plot_R2_bar(R_total, 'total')
-    # plot_R2_bar(R_pred, 'pred')
+    plot_R2_bar(R_pred, 'pred')
