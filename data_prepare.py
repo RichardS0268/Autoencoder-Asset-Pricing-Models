@@ -103,7 +103,7 @@ def cal_portfolio_charas(month, df):
 
 if __name__ == '__main__':
     # pre-process share data
-    processed_df = Parallel(n_jobs=1)(delayed(pre_process)(d) for d in tqdm(datashare.DATE.drop_duplicates().to_list(), colour='green', desc='Processing'))
+    processed_df = Parallel(n_jobs=-1)(delayed(pre_process)(d) for d in tqdm(datashare.DATE.drop_duplicates().to_list(), colour='green', desc='Processing'))
     processed_df = pd.concat(processed_df)
 
     ##TODO: calculate portfolio returns (or download preprocessed data)
@@ -120,21 +120,7 @@ if __name__ == '__main__':
     # for tdf in _portfolio_chara_set[1:]:
     #     p_charas = pd.concat([p_charas, tdf])
     
-    
-    mon_list = []
-    permno_index = pd.Series(dtype='float64')
-    R_matrix = pd.DataFrame()
-
-    for g in tqdm(mon_ret.groupby('date'), colour='blue', desc='Generating R Matrix'):
-        mon_list.append(g[0])
-        mon_r = g[1].drop_duplicates('permno')
-        permno_index = pd.concat([permno_index, mon_r['permno']]).drop_duplicates()
-        
-        R_matrix = pd.concat([R_matrix.reindex(permno_index), mon_r.set_index('permno').reindex(permno_index)['ret-rf']], axis=1)
-        R_matrix.columns = mon_list
-        
-    
+            
     processed_df.to_pickle('data/datashare_re.pkl')
     # portfolio_rets.to_pickle('data/portfolio_rets.pkl')
     # p_charas.to_pickle('data/p_charas.pkl')
-    R_matrix.to_pickle('data/stock_R_matrix.pkl')
