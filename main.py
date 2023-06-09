@@ -214,7 +214,7 @@ if __name__ == "__main__":
     models_name = []
     R_square = []
     for g in product(args.Model.split(' '), args.K.split(' ')):
-        if isinstance(args.omit_char, str):
+        if isinstance(args.omit_char, str) and len(args.omit_char) > 0:
             omit_chars = args.omit_char.split(' ')
         else:
             omit_chars = []
