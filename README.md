@@ -45,3 +45,19 @@ python main.py --Model 'CA0' --K '5' --omit_char 'mvel1 mom1m idiovol retvol mom
 |CA2 | -1.87 | -0.31 | -1.19 | -1.14 | -1.13 | -1.94 |
 |CA3 | -0.04 | -1.00 | -2.24 | -1.25 | -0.64 | -1.50 |
 <img src="/imgs/pred_R2.png" width=100%>
+
+### Risk Premia v.s. Mispricing
+<table>
+<tr>
+<td><img src="imgs/alpha/FF_5_inference_alpha_plot.png" border=0></td>
+<td><img src="imgs/alpha/PCA_5_inference_alpha_plot.png" border=0></td>
+</tr>
+<tr>
+<td><img src="imgs/alpha/IPCA_5_alpha_plot.png" border=0></td>
+<td><img src="imgs/alpha/CA1_5_inference_alpha_plot.png" border=0></td>
+</tr>
+<tr>
+<td><img src="imgs/alpha/CA2_5_inference_alpha_plot.png" border=0></td>
+<td><img src="imgs/alpha/CA3_5_inference_alpha_plot.png" border=0></td>
+</tr>
+</table>
