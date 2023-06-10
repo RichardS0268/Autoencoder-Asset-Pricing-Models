@@ -10,3 +10,4 @@ saved_models
 *.ipynb
 results/
 logs/
+R_squares/

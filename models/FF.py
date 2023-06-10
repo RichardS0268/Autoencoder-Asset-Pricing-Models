@@ -14,6 +14,7 @@ class FF(modelBase):
         super(FF, self).__init__(f'FF_{K}')
         self.K = K
         self.train_period[0] = 19630731 # ff5 data from FF website is only available from 196307
+        self.omit_char = []
         self.__prepare_FFf()
         
     

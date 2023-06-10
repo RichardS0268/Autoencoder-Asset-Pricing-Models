@@ -11,7 +11,7 @@ def calculate_R2(model, type, input=None):
     portfolio_ret = pd.read_pickle('data/portfolio_ret.pkl')
     oos_ret = portfolio_ret.loc[(portfolio_ret['DATE'] >= OOS_start) & (portfolio_ret['DATE'] <= OOS_end)]
 
-    if not input:
+    if not isinstance(input, np.ndarray):
         # print('type: ', type)
         if isinstance(model, str):
             output_path = f'results/{type}/{model}_{type}.csv'
@@ -21,11 +21,14 @@ def calculate_R2(model, type, input=None):
         model_output = pd.read_csv(output_path)
     else:
         model_output = input
-    
+        model_output = pd.DataFrame(model_output, columns=CHARAS_LIST)
+        model_output['DATE'] = oos_ret['DATE'].to_list()
+  
     for col in model_output.columns: # hard code for format error
         model_output[col] = model_output[col].apply(lambda x: float(str(x).replace('[', '').replace(']', '')))
     
-    residual_square = ((oos_ret.set_index('DATE') - model_output.set_index('DATE'))**2).dropna()
+    model_output.to_csv('tmp.csv')
+    residual_square = ((oos_ret.set_index('DATE') - model_output.set_index('DATE'))**2).fillna(0)
     residual_square = (1 - (residual_square == np.inf) * 1.0) * residual_square # drop Inf outliers
     
     total_square = oos_ret.set_index('DATE')**2

@@ -235,9 +235,10 @@ class CA_base(nn.Module, modelBase):
         else:
             ret_R = [] # m, N*1
             for char in self.omit_char:
-                mon_factor, mon_beta = self.calFactor(month, [char]), self.calBeta(month, [char])
+                mon_factor, mon_beta = self.calFactor(month, [char]), self.calBeta(month)
                 ret_R.append((mon_beta @ mon_factor).cpu().detach().numpy())
             return np.array(ret_R).reshape(94, len(self.omit_char)) # N * m
+    
     
     def cal_delayed_Factor(self, month):
         # calculate the last day of the previous month

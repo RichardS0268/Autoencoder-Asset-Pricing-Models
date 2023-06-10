@@ -61,7 +61,7 @@ def model_inference_and_predict_CA(model):
     """
     model = model.to('cuda')
     mon_list = pd.read_pickle('data/mon_list.pkl')
-    test_mons = mon_list.loc[mon_list >= model.test_period[0]]
+    test_mons = mon_list.loc[(mon_list >= model.test_period[0])]
     if not len(model.omit_char):
         inference_result = pd.DataFrame()
         predict_result = pd.DataFrame()
@@ -107,11 +107,6 @@ def model_inference_and_predict_CA(model):
             else:
                 inference_R = model.inference(m) # return (N, m), m is the length of omit_char
                 inference_result.append(inference_R) # (T, N, m)
-                
-            # DEBUG:
-            # save inference_R and predict_R to csv
-            # inference_result.to_csv(f'temp/{model.name}_inference_stock_{m}.csv')
-            # predict_result.to_csv(f'temp/{model.name}_predict_stock_{m}.csv')
             
         # refit: change train period and valid period
         model.refit()
@@ -126,7 +121,7 @@ def model_inference_and_predict_CA(model):
     # GC: release RAM memory(model)
     del model
     gc.collect()
-    return inference_result, predict_result
+    return inference_result
 
 
 
@@ -143,7 +138,7 @@ def model_selection(model_type, model_K, omit_char=[]):
     if model_type == 'FF':
         return {
             'name': f'FF_{model_K}',
-            'omit_char': '',
+            'omit_char': [],
             'model': FF(K=model_K)
         } 
             
@@ -227,7 +222,7 @@ if __name__ == "__main__":
         if model['name'].split('_')[0][:-1] == 'CA':
             print('model_inference_and_predict_CA')
             # if have omit char, inf_ret (T, N, m)
-            inf_ret, _ = model_inference_and_predict_CA(model['model'])  
+            inf_ret = model_inference_and_predict_CA(model['model'])  
         else:
             model_inference_and_predict(model['model'])
         print('name : ', model['name'])
@@ -239,9 +234,9 @@ if __name__ == "__main__":
             alpha_plot(model['model'], 'inference', save_dir='imgs')
             # alpha_plot(model['model'], 'predict', save_dir='alpha_imgs')
         else:
-            for i in range(len(model.omit_char)):
-                inference_r = inf_ret[:, :, i].reshape(-1, 94) # T * N
-                R_square.append(calculate_R2(_, _, inference_r))
+            for i in range(len(model['omit_char'])):
+                inference_r = np.array(inf_ret)[:, :, i].reshape(-1, 94) # T * N
+                R_square.append(calculate_R2(None, None, inference_r))
 
         del model
 
