@@ -73,7 +73,7 @@ def alpha_plot(model, type, save_dir='imgs'):
     plt.legend()
 
     plt.title(model.name)
-    plt.savefig(f'{save_dir}/alpha/{model.name}_alpha_plot.png')
+    plt.savefig(f'{save_dir}/alpha/{model.name}_inference_alpha_plot.png')
     plt.close()
     
 
