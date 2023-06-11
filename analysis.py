@@ -27,7 +27,6 @@ def calculate_R2(model, type, input=None):
     for col in model_output.columns: # hard code for format error
         model_output[col] = model_output[col].apply(lambda x: float(str(x).replace('[', '').replace(']', '')))
     
-    model_output.to_csv('tmp.csv')
     residual_square = ((oos_ret.set_index('DATE') - model_output.set_index('DATE'))**2).fillna(0)
     residual_square = (1 - (residual_square == np.inf) * 1.0) * residual_square # drop Inf outliers
     
