@@ -8,7 +8,7 @@ import warnings
 warnings.filterwarnings('ignore')
 
 
-def calculate_R2(model, type, input=None):
+def calculate_R2(model, type, input=None, complete_r=None):
     portfolio_ret = pd.read_pickle('data/portfolio_ret.pkl')
     oos_ret = portfolio_ret.loc[(portfolio_ret['DATE'] >= OOS_start) & (portfolio_ret['DATE'] <= OOS_end)]
 
@@ -34,7 +34,22 @@ def calculate_R2(model, type, input=None):
     total_square = oos_ret.set_index('DATE')**2
     total_square = (1 - (total_square == np.inf) * 1.0) * total_square # drop Inf outliers
     
-    return 1 - np.sum(residual_square.values)/np.sum(total_square.values)
+    model_output_R2 = 1 - np.sum(residual_square.values)/np.sum(total_square.values)
+    
+    if not isinstance(input, np.ndarray):
+        return model_output_R2
+    
+    else:
+        no_omit_output = complete_r
+        no_omit_output = pd.DataFrame(no_omit_output, columns=CHARAS_LIST)
+        no_omit_output['DATE'] = oos_ret['DATE'].to_list()
+        
+        no_omit_residual_square = ((oos_ret.set_index('DATE') - no_omit_output.set_index('DATE'))**2).dropna()
+        no_omit_residual_square = (1 - (no_omit_residual_square == np.inf) * 1.0) * no_omit_residual_square # drop Inf outliers
+        
+        no_omit_model_output_R2 = 1 - np.sum(no_omit_residual_square.values)/np.sum(total_square.values)
+        
+        return no_omit_model_output_R2 - model_output_R2 # the difference of R^2, i.e. the importance of characteristics
 
 
 
@@ -113,8 +128,33 @@ def plot_R2_bar(R_df, type):
 
     plt.savefig(f'imgs/{type}_R2.png')
     plt.close()
+
+
+
+def plot_R2_table(R_df, type):
+    plt.figure(dpi=200)
     
+    for col in R_df.columns:
+        R_df[col] = R_df[col].apply(lambda x: round_number(x))
+
+    R_df = R_df.reset_index()
+    R_df.columns = ['Model', 'K=1', 'K=2', 'K=3', 'K=4', 'K=5', 'K=6']
+
+
+    fig_total =  ff.create_table(R_df,
+                        colorscale=[[0, 'white'],
+                                    [0.01, 'lightgrey'],
+                                    [1.0, 'white']],
+                        font_colors=['#000000', '#000000',
+                                    '#000000'])
+    fig_total.update_layout(
+        autosize=False,
+        width=500,
+        height=200,
+    )
+    fig_total.write_image(f"imgs/R2_{type}_table.png", scale=4)
     
+
 
 def round_number(num):
     num = str(round(num*100, 2))
@@ -145,42 +185,7 @@ if __name__=="__main__":
     plot_R2_bar(R_pred, 'pred')
     
     R_total_df = pd.DataFrame(np.array(total_R2).reshape(-1, 6), columns = ['K=1', 'K=2', 'K=3', 'K=4', 'K=5', 'K=6'], index=['FF', 'PCA', 'IPCA', 'CA0', 'CA1', 'CA2', 'CA3'])
-    for col in R_total_df.columns:
-        R_total_df[col] = R_total_df[col].apply(lambda x: round_number(x))
-
-    R_total_df = R_total_df.reset_index()
-    R_total_df.columns = ['Model', 'K=1', 'K=2', 'K=3', 'K=4', 'K=5', 'K=6']
-
     R_pred_df = pd.DataFrame(np.array(predict_R2).reshape(-1, 6), columns = ['K=1', 'K=2', 'K=3', 'K=4', 'K=5', 'K=6'], index=['FF', 'PCA', 'IPCA', 'CA0', 'CA1', 'CA2', 'CA3'])
-    for col in R_pred_df.columns:
-        R_pred_df[col] = R_pred_df[col].apply(lambda x: round_number(x))
-
-    R_pred_df = R_pred_df.reset_index()
-    R_pred_df.columns = ['Model', 'K=1', 'K=2', 'K=3', 'K=4', 'K=5', 'K=6']
-
-
-    fig_total =  ff.create_table(R_total_df,
-                        colorscale=[[0, 'white'],
-                                    [0.01, 'lightgrey'],
-                                    [1.0, 'white']],
-                        font_colors=['#000000', '#000000',
-                                    '#000000'])
-    fig_total.update_layout(
-        autosize=False,
-        width=500,
-        height=200,
-    )
-    fig_total.write_image("imgs/R2_total_table.png", scale=4)
-
-    fig_pred =  ff.create_table(R_pred_df,
-                        colorscale=[[0, 'white'],
-                                    [0.01, 'lightgrey'],
-                                    [1.0, 'white']],
-                        font_colors=['#000000', '#000000',
-                                    '#000000'])
-    fig_pred.update_layout(
-        autosize=False,
-        width=500,
-        height=200,
-    )
-    fig_pred.write_image("imgs/R2_pred_table.png", scale=4)
+    
+    plot_R2_table(R_total_df, 'total')
+    plot_R2_table(R_pred_df, 'pred')  

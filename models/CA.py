@@ -237,6 +237,10 @@ class CA_base(nn.Module, modelBase):
             for char in self.omit_char:
                 mon_factor, mon_beta = self.calFactor(month, [char]), self.calBeta(month, [char])
                 ret_R.append((mon_beta @ mon_factor).cpu().detach().numpy()) # N*1
+                
+            mon_factor, mon_beta = self.calFactor(month), self.calBeta(month)
+            ret_R.append((mon_beta @ mon_factor).cpu().detach().numpy()) # also add complete result
+            
             return np.array(ret_R).squeeze(2).T # N*m
     
     
