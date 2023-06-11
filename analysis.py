@@ -120,7 +120,7 @@ if __name__=="__main__":
     FFs = ["FF_1", "FF_2", "FF_3", "FF_4", "FF_5", "FF_6"]
     PCAs = ["PCA_1", "PCA_2", "PCA_3", "PCA_4", "PCA_5", "PCA_6"]
     IPCAs = ["IPCA_1", "IPCA_2", "IPCA_3", "IPCA_4", "IPCA_5", "IPCA_6"]
-    models = FFs + PCAs + CAs + IPCAs
+    models = FFs + PCAs + IPCAs + CAs
     
     total_R2 = []
     for m in models:
