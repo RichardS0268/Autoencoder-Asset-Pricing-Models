@@ -9,8 +9,8 @@ import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader, TensorDataset
 
-MAX_EPOCH = 200
 
+MAX_EPOCH = 200
 
 class CA_base(nn.Module, modelBase):
     def __init__(self, name, omit_char=[], device='cuda'):
@@ -57,7 +57,7 @@ class CA_base(nn.Module, modelBase):
         # exit(0) if there is any nan in align_df
         if align_df.isnull().values.any():
             assert False, f'There is nan in align_df of : {month}'
-        # return stock index (L), beta_nn_input (94*L=K*L), factor_nn_input (94*1=L*1), labels (L, )
+        # return stock index (L), beta_nn_input (94*94=P*N), factor_nn_input (94*1=P*1), labels (94, = N,)
         return align_df.index, align_df.values[:, :-1].T, factor_nn_input.T.values , align_df.values[:, -1].T
     
     
@@ -87,14 +87,14 @@ class CA_base(nn.Module, modelBase):
         return torch.sum(processed_char * processed_pfret, dim=1)
 
     
-    ##TODO: train_one_epoch
+    # train_one_epoch
     def __train_one_epoch(self):
         epoch_loss = 0.0
         for i, (beta_nn_input, factor_nn_input, labels) in enumerate(self.train_dataloader):
             self.optimizer.zero_grad()
-            # beta_nn_input reshape: (1, 94, N) -> (N, 94)
-            # factor_nn_input reshape: (1, 94, 1) -> (1, 94)
-            # labels reshape: (1, N) -> (N, )
+            # beta_nn_input reshape: (1, 94, 94) -> (94, 94) (1*P*N => N*P)
+            # factor_nn_input reshape: (1, 94, 1) -> (1, 94) (1*P*1 => 1*P)
+            # labels reshape: (1, 94) -> (94, ) (1*N => N,)
             beta_nn_input = beta_nn_input.squeeze(0).T
             factor_nn_input = factor_nn_input.squeeze(0).T
             labels = labels.squeeze(0)
@@ -115,9 +115,9 @@ class CA_base(nn.Module, modelBase):
     def __valid_one_epoch(self):
         epoch_loss = 0.0
         for i, (beta_nn_input, factor_nn_input, labels) in enumerate(self.valid_dataloader):
-            # beta_nn_input reshape: (1, 94, N) -> (N, 94)
-            # factor_nn_input reshape: (1, 94, 1) -> (1, 94)
-            # labels reshape: (1, N) -> (N, )
+            # beta_nn_input reshape: (1, 94, 94) -> (94, 94) (1*N*P => P*N)
+            # factor_nn_input reshape: (1, 94, 1) -> (1, 94) (1*N*1 => 1*N)
+            # labels reshape: (1, 94) -> (94, ) (1*N => N,)
             beta_nn_input = beta_nn_input.squeeze(0).T
             factor_nn_input = factor_nn_input.squeeze(0).T
             labels = labels.squeeze(0)
@@ -148,7 +148,7 @@ class CA_base(nn.Module, modelBase):
             train_loss.append(train_error)
             
             self.eval()
-            ##TODO, valid and early stop
+            # valid and early stop
             with torch.no_grad():
                 valid_error = self.__valid_one_epoch()
                 
@@ -193,7 +193,7 @@ class CA_base(nn.Module, modelBase):
 
 
     def calBeta(self, month, skip_char=[]):
-        _, beta_nn_input, _, _ = self._get_item(month)
+        _, beta_nn_input, _, _ = self._get_item(month) # beta input: 94 * 94 = P * N
         
         # if some variables need be omitted
         if len(skip_char):
@@ -348,21 +348,22 @@ class CA3(CA_base):
         self.dropout = dropout
         # P -> 32 -> 16 -> 8 -> K
         self.beta_nn = nn.Sequential(
+            # hidden layer 1
             nn.Linear(94, 32),
             nn.BatchNorm1d(32),
             nn.ReLU(),
             nn.Dropout(self.dropout),
-
+            # hidden layer 2
             nn.Linear(32, 16),
             nn.BatchNorm1d(16),
             nn.ReLU(),
             nn.Dropout(self.dropout),
-
+            # hidden layer 3
             nn.Linear(16, 8),
             nn.BatchNorm1d(8),
             nn.ReLU(),
             nn.Dropout(self.dropout),
-
+            # output layer
             nn.Linear(8, hidden_size)
         )
         self.factor_nn = nn.Sequential(
