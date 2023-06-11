@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from utils import *
 import matplotlib.pyplot as plt
+import plotly.figure_factory as ff
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -114,6 +115,14 @@ def plot_R2_bar(R_df, type):
     plt.close()
     
     
+
+def round_number(num):
+    num = str(round(num*100, 2))
+    while len(num.split('.')[1]) < 2:
+        num = num + '0'
+    return num
+
+
     
 if __name__=="__main__":
     CAs = ["CA0_1", "CA0_2", "CA0_3", "CA0_4", "CA0_5", "CA0_6", "CA1_1", "CA1_2", "CA1_3", "CA1_4", "CA1_5", "CA1_6", "CA2_1", "CA2_2", "CA2_3", "CA2_4", "CA2_5", "CA2_6", "CA3_1", "CA3_2", "CA3_3", "CA3_4", "CA3_5", "CA3_6"]
@@ -134,3 +143,44 @@ if __name__=="__main__":
     
     plot_R2_bar(R_total, 'total')
     plot_R2_bar(R_pred, 'pred')
+    
+    R_total_df = pd.DataFrame(np.array(total_R2).reshape(-1, 6), columns = ['K=1', 'K=2', 'K=3', 'K=4', 'K=5', 'K=6'], index=['FF', 'PCA', 'IPCA', 'CA0', 'CA1', 'CA2', 'CA3'])
+    for col in R_total_df.columns:
+        R_total_df[col] = R_total_df[col].apply(lambda x: round_number(x))
+
+    R_total_df = R_total_df.reset_index()
+    R_total_df.columns = ['Model', 'K=1', 'K=2', 'K=3', 'K=4', 'K=5', 'K=6']
+
+    R_pred_df = pd.DataFrame(np.array(predict_R2).reshape(-1, 6), columns = ['K=1', 'K=2', 'K=3', 'K=4', 'K=5', 'K=6'], index=['FF', 'PCA', 'IPCA', 'CA0', 'CA1', 'CA2', 'CA3'])
+    for col in R_pred_df.columns:
+        R_pred_df[col] = R_pred_df[col].apply(lambda x: round_number(x))
+
+    R_pred_df = R_pred_df.reset_index()
+    R_pred_df.columns = ['Model', 'K=1', 'K=2', 'K=3', 'K=4', 'K=5', 'K=6']
+
+
+    fig_total =  ff.create_table(R_total_df,
+                        colorscale=[[0, 'white'],
+                                    [0.01, 'lightgrey'],
+                                    [1.0, 'white']],
+                        font_colors=['#000000', '#000000',
+                                    '#000000'])
+    fig_total.update_layout(
+        autosize=False,
+        width=500,
+        height=200,
+    )
+    fig_total.write_image("imgs/R2_total_table.png", scale=4)
+
+    fig_pred =  ff.create_table(R_pred_df,
+                        colorscale=[[0, 'white'],
+                                    [0.01, 'lightgrey'],
+                                    [1.0, 'white']],
+                        font_colors=['#000000', '#000000',
+                                    '#000000'])
+    fig_pred.update_layout(
+        autosize=False,
+        width=500,
+        height=200,
+    )
+    fig_pred.write_image("imgs/R2_pred_table.png", scale=4)
