@@ -45,5 +45,5 @@ python main.py --Model 'IPCA CA0 CA1 CA2 CA3' --K '5' --omit_char 'absacc acc ag
 </tr>
 </table>
 
-### Characteristics Importance (reduced total R^2)
+### Characteristics Importance (reduced total R^2 (%), K=5)
 <img src="/imgs/omit_char_R2_bias.png" width=100%>

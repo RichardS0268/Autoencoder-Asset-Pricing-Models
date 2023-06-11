@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from utils import *
+import seaborn as sns
 import matplotlib.pyplot as plt
 import plotly.figure_factory as ff
 
@@ -171,6 +172,7 @@ if __name__=="__main__":
     IPCAs = ["IPCA_1", "IPCA_2", "IPCA_3", "IPCA_4", "IPCA_5", "IPCA_6"]
     models = FFs + PCAs + IPCAs + CAs
     
+    ## Plot R^2 bars
     total_R2 = []
     for m in models:
         total_R2.append(calculate_R2(m, 'inference'))
@@ -184,8 +186,24 @@ if __name__=="__main__":
     plot_R2_bar(R_total, 'total')
     plot_R2_bar(R_pred, 'pred')
     
+    ## Save R^2 tables
     R_total_df = pd.DataFrame(np.array(total_R2).reshape(-1, 6), columns = ['K=1', 'K=2', 'K=3', 'K=4', 'K=5', 'K=6'], index=['FF', 'PCA', 'IPCA', 'CA0', 'CA1', 'CA2', 'CA3'])
     R_pred_df = pd.DataFrame(np.array(predict_R2).reshape(-1, 6), columns = ['K=1', 'K=2', 'K=3', 'K=4', 'K=5', 'K=6'], index=['FF', 'PCA', 'IPCA', 'CA0', 'CA1', 'CA2', 'CA3'])
     
     plot_R2_table(R_total_df, 'total')
     plot_R2_table(R_pred_df, 'pred')  
+    
+    
+    ## Plot characteristics importance heatmap
+    # models = ["IPCA", "CA0_5", "CA1_5", "CA2_5", "CA3_5"]
+    # #TODO: paste results from R_squares/
+    # R2_omit = []
+    # R_minus = pd.DataFrame(np.array(R2_omit).reshape(-1, 94)*100, index=models, columns=CHARAS_LIST).T
+    # char_ranks = R_minus.T.sum().argsort().argsort().index.to_list()
+    # char_ranks.reverse()
+    
+    # plt.figure(figsize=(8, 15), dpi=200)
+    # sns.heatmap(R_minus.T[char_ranks].T, cmap='Blues', linewidths=0.6)
+    # plt.savefig('imgs/omit_char_R2_bias.png', bbox_inches='tight')
+    # plt.close()
+    
