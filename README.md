@@ -53,7 +53,7 @@ python main.py --Model 'CA0' --K '5' --omit_char 'mvel1 mom1m idiovol retvol mom
 <td><img src="imgs/alpha/PCA_5_inference_alpha_plot.png" border=0></td>
 </tr>
 <tr>
-<td><img src="imgs/alpha/IPCA_5_alpha_plot.png" border=0></td>
+<td><img src="imgs/alpha/IPCA_5_inference_alpha_plot.png" border=0></td>
 <td><img src="imgs/alpha/CA1_5_inference_alpha_plot.png" border=0></td>
 </tr>
 <tr>
