@@ -89,18 +89,20 @@ class IPCA(modelBase):
             y = self.portfolio_ret.loc[self.portfolio_ret.DATE == month][CHARAS_LIST].copy(deep=False)
             
             for char in self.omit_char:
-                Z[[char]] = Z[[char]] * 0.0
-                y[[char]] = y[[char]] * 0.0
-                Z = Z.values
-                y = y.values.T
-                beta = Z @ self.gamma
-                f_hat = np.array(np.matrix(beta.T @ beta).I @ beta.T @ y) # K * 1
+                Z_input = Z.copy(deep=False)
+                y_input = y.copy(deep=False)
+                Z_input[[char]] = Z_input[[char]] * 0.0
+                y_input[[char]] = y_input[[char]] * 0.0
+                Z_input = Z_input.values
+                y_input = y_input.values.T
+                beta = Z_input @ self.gamma
+                f_hat = np.array(np.matrix(beta.T @ beta).I @ beta.T @ y_input) # K * 1
                 inference_R.append((beta @ f_hat).flatten()) # m * N
 
-            Z = Z.values
-            y = y.values.T
-            beta = Z @ self.gamma
-            f_hat = np.array(np.matrix(beta.T @ beta).I @ beta.T @ y) # K * 1
+            Z_input = Z.values
+            y_input = y.values.T
+            beta = Z_input @ self.gamma
+            f_hat = np.array(np.matrix(beta.T @ beta).I @ beta.T @ y_input) # K * 1
             inference_R.append((beta @ f_hat).flatten()) # m * N
             
             return np.array(inference_R).T # N * m
