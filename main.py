@@ -237,7 +237,7 @@ if __name__ == "__main__":
             # alpha_plot(model['model'], 'predict', save_dir='alpha_imgs')
         else:
             for i in range(len(model['omit_char'])):
-                inference_r = np.array(inf_ret)[:, :, i].squeeze(2) # T * N
+                inference_r = np.array(inf_ret)[:, :, i] # T * N
                 R_square.append(calculate_R2(None, None, inference_r))
 
         del model
