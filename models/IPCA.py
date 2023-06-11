@@ -14,7 +14,7 @@ class IPCA(modelBase):
         self.K = K
         self.omit_char = omit_char
         np.random.seed(10)
-        self.gamma = np.random.random([94, self.K]) # L = 94, we have total 94 characteristics 
+        self.gamma = np.random.random([94, self.K]) # P = 94, we have total 94 characteristics 
         self.valid_error = []
         self.__prepare_data()
         
@@ -28,7 +28,7 @@ class IPCA(modelBase):
     def __valid(self):
         MSE_set = []
         for mon in self.mon_list[(self.mon_list >= self.valid_period[0]) & (self.mon_list <= self.valid_period[1])]:
-            Z = self.p_charas.loc[self.p_charas.DATE == mon][CHARAS_LIST].values # N * L
+            Z = self.p_charas.loc[self.p_charas.DATE == mon][CHARAS_LIST].values # N * P
             y = self.portfolio_ret.loc[self.portfolio_ret.DATE == mon][CHARAS_LIST].values.T # N * 1
             beta = Z @ self.gamma # N * K
             f_hat = np.array(np.matrix(beta.T @ beta).I @ beta.T @ y) # K * 1
@@ -46,7 +46,7 @@ class IPCA(modelBase):
         numer = np.zeros((94*self.K, 1))
         denom = np.zeros((94*self.K, 94*self.K))
         for mon in self.mon_list[(self.mon_list >= self.train_period[0]) & (self.mon_list <= self.train_period[1])]:
-            Z = self.p_charas.loc[self.p_charas.DATE == mon][CHARAS_LIST].values # N * L
+            Z = self.p_charas.loc[self.p_charas.DATE == mon][CHARAS_LIST].values # N * P
             y = self.portfolio_ret.loc[self.portfolio_ret.DATE == mon][CHARAS_LIST].values.T # N * 1
             beta = Z @ gamma_old # N * K
             f_hat = np.array(np.matrix(beta.T @ beta).I @ beta.T @ y) # K * 1
@@ -77,7 +77,7 @@ class IPCA(modelBase):
         
     
     def inference(self, month):
-        Z = self.p_charas.loc[self.p_charas.DATE == month][CHARAS_LIST].values # N * L
+        Z = self.p_charas.loc[self.p_charas.DATE == month][CHARAS_LIST].values # N * P
         y = self.portfolio_ret.loc[self.portfolio_ret.DATE == month][CHARAS_LIST].values.T # N * 1
         beta = Z @ self.gamma # N * K
         f_hat = np.array(np.matrix(beta.T @ beta).I @ beta.T @ y) # K * 1
@@ -90,13 +90,13 @@ class IPCA(modelBase):
         
         lag_f_hat = []
         for mon in self.mon_list[(self.mon_list >= 19870101) & (self.mon_list < month)]:
-            Z = self.p_charas.loc[self.p_charas.DATE == mon][CHARAS_LIST].values # N * L
+            Z = self.p_charas.loc[self.p_charas.DATE == mon][CHARAS_LIST].values # N * P
             y = self.portfolio_ret.loc[self.portfolio_ret.DATE == mon][CHARAS_LIST].values.T # N * 1
             beta = Z @ self.gamma # N * K
             f_hat = np.array(np.matrix(beta.T @ beta).I @ beta.T @ y) # K * 1
             lag_f_hat.append(f_hat)
             
-        Z = self.p_charas.loc[self.p_charas.DATE == month][CHARAS_LIST].values # N * L
+        Z = self.p_charas.loc[self.p_charas.DATE == month][CHARAS_LIST].values # N * P
         y = self.portfolio_ret.loc[self.portfolio_ret.DATE == month][CHARAS_LIST].values.T # N * 1
         beta = Z @ self.gamma # N * K
         

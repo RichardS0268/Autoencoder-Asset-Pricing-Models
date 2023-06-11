@@ -115,8 +115,8 @@ class CA_base(nn.Module, modelBase):
     def __valid_one_epoch(self):
         epoch_loss = 0.0
         for i, (beta_nn_input, factor_nn_input, labels) in enumerate(self.valid_dataloader):
-            # beta_nn_input reshape: (1, 94, 94) -> (94, 94) (1*N*P => P*N)
-            # factor_nn_input reshape: (1, 94, 1) -> (1, 94) (1*N*1 => 1*N)
+            # beta_nn_input reshape: (1, 94, 94) -> (94, 94) (1*P*N => N*P)
+            # factor_nn_input reshape: (1, 94, 1) -> (1, 94) (1*P*1 => 1*P)
             # labels reshape: (1, 94) -> (94, ) (1*N => N,)
             beta_nn_input = beta_nn_input.squeeze(0).T
             factor_nn_input = factor_nn_input.squeeze(0).T
@@ -193,33 +193,33 @@ class CA_base(nn.Module, modelBase):
 
 
     def calBeta(self, month, skip_char=[]):
-        _, beta_nn_input, _, _ = self._get_item(month) # beta input: 94 * 94 = P * N
+        _, beta_nn_input, _, _ = self._get_item(month) # beta input: 94*94 = P*N
         
         # if some variables need be omitted
         if len(skip_char):
-            beta_nn_input = pd.DataFrame(beta_nn_input.T, columns=CHARAS_LIST)
+            beta_nn_input = pd.DataFrame(beta_nn_input.T, columns=CHARAS_LIST) # N*P
             beta_nn_input[skip_char] = beta_nn_input[skip_char] * 0.0
-            beta_nn_input = beta_nn_input.values.T
+            beta_nn_input = beta_nn_input.values.T # P*N
         
-        beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device)
-        return self.beta_nn(beta_nn_input) # N * K
+        beta_nn_input = torch.tensor(beta_nn_input, dtype=torch.float32).T.to(self.device) # N*P
+        return self.beta_nn(beta_nn_input) # N*K
     
     
     def calFactor(self, month, skip_char=[]):
-        _, _, factor_nn_input, _ = self._get_item(month)
+        _, _, factor_nn_input, _ = self._get_item(month) # factor input: P*1
         
         # if some variables need be omitted
         if len(skip_char):
-            factor_nn_input = pd.DataFrame(factor_nn_input.T, columns=CHARAS_LIST)
+            factor_nn_input = pd.DataFrame(factor_nn_input.T, columns=CHARAS_LIST) # 1*P
             factor_nn_input[skip_char] = factor_nn_input[skip_char] * 0.0
-            factor_nn_input = factor_nn_input.values.T
+            factor_nn_input = factor_nn_input.values.T # P*1
 
-        factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device)
-        factor_pred = self.factor_nn(factor_nn_input).T
+        factor_nn_input = torch.tensor(factor_nn_input, dtype=torch.float32).T.to(self.device) # 1*P
+        factor_pred = self.factor_nn(factor_nn_input).T # K*1
         
         self.factor_nn_pred.append(factor_pred)
         
-        return factor_pred
+        return factor_pred # K*1
     
     
     def inference(self, month):
@@ -233,11 +233,11 @@ class CA_base(nn.Module, modelBase):
             # R_{N*1} = Beta_{N*K} @ F_{K*1}
             return mon_beta @ mon_factor
         else:
-            ret_R = [] # m, N*1
+            ret_R = []
             for char in self.omit_char:
-                mon_factor, mon_beta = self.calFactor(month, [char]), self.calBeta(month)
-                ret_R.append((mon_beta @ mon_factor).cpu().detach().numpy())
-            return np.array(ret_R).reshape(94, len(self.omit_char)) # N * m
+                mon_factor, mon_beta = self.calFactor(month), self.calBeta(month, [char])
+                ret_R.append((mon_beta @ mon_factor).cpu().detach().numpy()) # N*1
+            return np.array(ret_R).squeeze(2).T # N*m
     
     
     def cal_delayed_Factor(self, month):

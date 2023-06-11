@@ -62,7 +62,8 @@ def model_inference_and_predict_CA(model):
     model = model.to('cuda')
     mon_list = pd.read_pickle('data/mon_list.pkl')
     test_mons = mon_list.loc[(mon_list >= model.test_period[0])]
-    if not len(model.omit_char):
+    
+    if not len(model.omit_char): # no omit characteristics
         inference_result = pd.DataFrame()
         predict_result = pd.DataFrame()
     else:
@@ -71,7 +72,7 @@ def model_inference_and_predict_CA(model):
     T_bar = tqdm(test_mons.groupby(test_mons.apply(lambda x: x//10000)), colour='red', desc=f'{model.name} Inferencing & Predicting')
     
     stock_index = pd.Series(dtype=np.int64)
-    for g in T_bar: # rolling train
+    for g in T_bar: # rolling train, refit once a year
         T_bar.set_postfix({'Year': g[0]})
 
         model.reset_weight()
@@ -92,7 +93,7 @@ def model_inference_and_predict_CA(model):
             m_stock_index, _, _, _ = model._get_item(m)
             stock_index = pd.concat([stock_index, pd.Series(m_stock_index)]).drop_duplicates().astype(int)
 
-            if not len(model.omit_char):
+            if not len(model.omit_char): # no omit characteristics
                 # move inference_R and predict_R to cpu
                 inference_R = model.inference(m) # return (N, 1)
                 inference_R = inference_R.cpu().detach().numpy()
@@ -217,6 +218,7 @@ if __name__ == "__main__":
         model = model_selection(g[0], int(g[1]), omit_chars)
             
         print(f"{time.strftime('%a, %d %b %Y %H:%M:%S +0800', time.gmtime())} | Model: {model['name']} | {omit_chars}")
+        print('name : ', model['name'])
         models_name.append(model['name'])
 
         if model['name'].split('_')[0][:-1] == 'CA':
@@ -225,17 +227,17 @@ if __name__ == "__main__":
             inf_ret = model_inference_and_predict_CA(model['model'])  
         else:
             model_inference_and_predict(model['model'])
-        print('name : ', model['name'])
+        
         gc.collect()    
         
-        # TODO: unknown type for calculate R2        
+        # Save total R^2   
         if not len(model['omit_char']):
             R_square.append(calculate_R2(model['model'], 'inference'))
             alpha_plot(model['model'], 'inference', save_dir='imgs')
             # alpha_plot(model['model'], 'predict', save_dir='alpha_imgs')
         else:
             for i in range(len(model['omit_char'])):
-                inference_r = np.array(inf_ret)[:, :, i].reshape(-1, 94) # T * N
+                inference_r = np.array(inf_ret)[:, :, i].squeeze(2) # T * N
                 R_square.append(calculate_R2(None, None, inference_r))
 
         del model
