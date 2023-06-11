@@ -38,19 +38,19 @@ def model_inference_and_predict(model):
         model.train_model()
         
         for m in g[1].to_list():
-            inference_result.append(model.inference(m))
+            inference_result.append(model.inference(m)) # T * N * m 
             if not len(model.omit_char):
                 predict_result.append(model.predict(m))
         # model refit (change train period and valid period)
         model.refit()
-
-    # print(inference_result)
-    inference_result = pd.DataFrame(inference_result, index=test_mons, columns=CHARAS_LIST)
-    inference_result.to_csv(f'results/inference/{model.name}_inference.csv')
     
     if not len(model.omit_char):
+        inference_result = pd.DataFrame(inference_result, index=test_mons, columns=CHARAS_LIST)
+        inference_result.to_csv(f'results/inference/{model.name}_inference.csv')
         predict_result = pd.DataFrame(predict_result, index=test_mons, columns=CHARAS_LIST)
         predict_result.to_csv(f'results/predict/{model.name}_predict.csv')
+    
+    return inference_result
     
     
     
@@ -226,7 +226,7 @@ if __name__ == "__main__":
             # if have omit char, inf_ret (T, N, m)
             inf_ret = model_inference_and_predict_CA(model['model'])  
         else:
-            model_inference_and_predict(model['model'])
+            inf_ret = model_inference_and_predict(model['model'])
         
         gc.collect()    
         

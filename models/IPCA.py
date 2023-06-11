@@ -77,11 +77,25 @@ class IPCA(modelBase):
         
     
     def inference(self, month):
-        Z = self.p_charas.loc[self.p_charas.DATE == month][CHARAS_LIST].values # N * P
-        y = self.portfolio_ret.loc[self.portfolio_ret.DATE == month][CHARAS_LIST].values.T # N * 1
-        beta = Z @ self.gamma # N * K
-        f_hat = np.array(np.matrix(beta.T @ beta).I @ beta.T @ y) # K * 1
-        return (beta @ f_hat).flatten()
+        if not len(self.omit_char):        
+            Z = self.p_charas.loc[self.p_charas.DATE == month][CHARAS_LIST].values # N * P
+            y = self.portfolio_ret.loc[self.portfolio_ret.DATE == month][CHARAS_LIST].values.T # N * 1
+            beta = Z @ self.gamma # N * K
+            f_hat = np.array(np.matrix(beta.T @ beta).I @ beta.T @ y) # K * 1
+            return (beta @ f_hat).flatten() # N, 1
+        else:
+            inference_R = []
+            Z = self.p_charas.loc[self.p_charas.DATE == month][CHARAS_LIST].copy(deep=False)
+            y = self.portfolio_ret.loc[self.portfolio_ret.DATE == month][CHARAS_LIST].copy(deep=False)
+            for char in self.omit_char:
+                Z[char] = Z[char] * 0.0
+                y[char] = y[char] * 0.0
+                Z = Z.values
+                y = y.values.T
+                beta = Z @ self.gamma
+                f_hat = np.array(np.matrix(beta.T @ beta).I @ beta.T @ y) # K * 1
+                inference_R.append((beta @ f_hat).flatten()) # m * N
+            return np.array(inference_R).T # N * m
     
     
     def predict(self, month):
