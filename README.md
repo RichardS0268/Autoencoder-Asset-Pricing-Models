@@ -44,3 +44,6 @@ python main.py --Model 'IPCA CA0 CA1 CA2 CA3' --K '5' --omit_char 'absacc acc ag
 <td><img src="imgs/alpha/CA3_5_inference_alpha_plot.png" border=0></td>
 </tr>
 </table>
+
+### Characteristics Importance (reduced total R^2)
+<img src="/imgs/omit_char_R2_bias.png" width=100%>
