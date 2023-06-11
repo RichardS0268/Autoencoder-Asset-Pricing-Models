@@ -10,7 +10,7 @@ python data_prepare.py
 # train models (ALL Together)
 python main.py --Model 'FF PCA IPCA CA0 CA1 CA2 CA3' --K '1 2 3 4 5 6'
 
-# train models (selected models and K)
+# train models (selected models and K, for example)
 python main.py --Model 'IPCA CA3' --K '5 6'
 
 # analyze models (calculate R^2)
