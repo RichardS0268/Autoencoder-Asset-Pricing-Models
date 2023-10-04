@@ -1,6 +1,6 @@
 # Autoencoder-Asset-Pricing-Models
 
-🧐 [**Report**](https://www.richardsong.space/autoencoder-asset-pricing-models) | [**Report PDF file**](https://file.notion.so/f/s/a803ec24-548b-4bc8-bc31-b750107af966/DL_Finance_Project_2.pdf?id=e0c96135-5f18-4fe2-a5c9-62d89b9fa9db&table=block&spaceId=80831c73-59e7-419d-a526-c25e3d85e2ce&expirationTimestamp=1695477600000&signature=nJ2YqMssvlV69HbZOveZN1a1_qQCJbLb95FVQyOThkQ&downloadName=DL_Finance_Project_2.pdf)
+🧐 [**Report**](https://www.richardsong.space/autoencoder-asset-pricing-models) | [**Report PDF file**](https://cloud.tsinghua.edu.cn/f/c02804bed00b4083bcb7/?dl=1)
 ## Set Up
 
 ```bash
