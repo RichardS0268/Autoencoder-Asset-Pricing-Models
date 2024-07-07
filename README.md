@@ -1,6 +1,6 @@
 # Autoencoder-Asset-Pricing-Models
 
-🧐 [**Report**](https://www.richardsong.space/autoencoder-asset-pricing-models) | [**Report PDF file**](https://cloud.tsinghua.edu.cn/f/c02804bed00b4083bcb7/?dl=1)
+🧐 [**Report**](https://www.richardsong.live/autoencoder-asset-pricing-models) | [**Report PDF file**](https://cloud.tsinghua.edu.cn/f/c02804bed00b4083bcb7/?dl=1)
 ## Set Up
 
 ```bash
